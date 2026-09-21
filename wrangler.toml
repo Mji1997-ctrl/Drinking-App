@@ -1,5 +1,5 @@
 name = "drinking-app"
-main = "src/index.js"
+main = "index.js"
 compatibility_date = "2026-05-01"
 
 # One Durable Object per game. SQLite backend — the only backend available
