@@ -1,4 +1,4 @@
-import APP_HTML from "../public/app.html";
+import APP_HTML from "./app.html";
 
 export { Room } from "./room.js";
 
