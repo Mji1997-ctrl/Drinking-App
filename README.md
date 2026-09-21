@@ -140,6 +140,6 @@ Three reasons I'd still not do it for this:
 2. **Battery.** A server, a hotspot and nine holes of photos on one phone is a
    dead phone by the back nine, and it's the phone holding the scorecard.
 3. **It's the referee.** If the server is in someone's pocket and that pocket
-   goes flat or leaves early, the round goes with it.
+   goes flat or leaves early, the round goes with it. 
 
 The Worker costs nothing, has no battery, and is still entirely yours.
