@@ -1,0 +1,2564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D4536" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131D18" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Pub golf scorecard with a live shared leaderboard.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9B%B3%3C/text%3E%3C/svg%3E">
+<style>
+/* Shell equivalent to the one the hosted preview provides, so the app's
+   own CSS behaves the same here as it did as an artifact. */
+:root{
+  color-scheme: light dark;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+img{max-width:100%}
+[hidden]{display:none !important}
+</style>
+<title>Pub Golf Scorecard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600;700&display=swap">
+<style>
+:root{
+  --paper:#F6F4EC; --card:#FFFDF7; --card-2:#F1EEE2;
+  --ink:#16211C; --ink-2:#55655B; --ink-3:#8B998F;
+  --line:#DED8C6; --line-2:#EAE5D6;
+  --green:#1D4536; --turf:#2F6B4F; --brass:#A9761F; --claret:#8E2F38;
+  --bar-bg:#1D4536; --bar-ink:#F2EFE3; --bar-ink-2:#9FBAAB; --bar-line:#2C5A47;
+  --chip:#EDE8D8; --chip-ink:#3C4B42;
+  --shadow:0 1px 0 rgba(22,33,28,.04), 0 10px 24px -18px rgba(22,33,28,.5);
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1411; --card:#151F1A; --card-2:#1B2721;
+    --ink:#EDEAE0; --ink-2:#A2B3A9; --ink-3:#77887E;
+    --line:#26332C; --line-2:#202B25;
+    --green:#BFDECD; --turf:#7FBF9A; --brass:#DBAE5B; --claret:#E58691;
+    --bar-bg:#131D18; --bar-ink:#EDEAE0; --bar-ink-2:#8FA398; --bar-line:#24312A;
+    --chip:#202C26; --chip-ink:#C6D4CB;
+    --shadow:0 1px 0 rgba(0,0,0,.2), 0 10px 24px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1411; --card:#151F1A; --card-2:#1B2721;
+  --ink:#EDEAE0; --ink-2:#A2B3A9; --ink-3:#77887E;
+  --line:#26332C; --line-2:#202B25;
+  --green:#BFDECD; --turf:#7FBF9A; --brass:#DBAE5B; --claret:#E58691;
+  --bar-bg:#131D18; --bar-ink:#EDEAE0; --bar-ink-2:#8FA398; --bar-line:#24312A;
+  --chip:#202C26; --chip-ink:#C6D4CB;
+  --shadow:0 1px 0 rgba(0,0,0,.2), 0 10px 24px -18px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Archivo","Helvetica Neue",Arial,sans-serif;
+  font-size:15px; line-height:1.45; -webkit-text-size-adjust:100%;
+  display:flex; flex-direction:column;
+}
+h1,h2,h3{margin:0; text-wrap:balance}
+button{font:inherit; color:inherit; cursor:pointer}
+:focus-visible{outline:2px solid var(--brass); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+.serif{font-family:"Instrument Serif",Georgia,serif; font-weight:400}
+.eyebrow{font-family:"Archivo Narrow","Archivo",sans-serif; font-weight:700;
+  text-transform:uppercase; letter-spacing:.12em; font-size:11px; color:var(--ink-3)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- top bar ---------- */
+.bar{
+  background:var(--bar-bg); color:var(--bar-ink);
+  padding:10px 16px; border-bottom:1px solid var(--bar-line);
+  display:flex; align-items:center; gap:12px; flex:0 0 auto;
+}
+.bar .mark{font-family:"Instrument Serif",Georgia,serif; font-size:21px; line-height:1.1}
+.bar .sub{font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:11px;
+  text-transform:uppercase; letter-spacing:.1em; color:var(--bar-ink-2)}
+.bar .right{margin-left:auto}
+.barbtn{
+  font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:11px;
+  text-transform:uppercase; letter-spacing:.09em; background:none;
+  border:1px solid var(--bar-line); color:var(--bar-ink-2);
+  padding:6px 10px; border-radius:99px; white-space:nowrap;
+}
+.barbtn[data-live="1"]{color:#8FD9AF; border-color:#2F6B4F}
+.barbtn[data-live="2"]{color:#E8C479; border-color:#7A6327}
+.barbtn::before{content:""; display:inline-block; width:6px; height:6px; border-radius:50%;
+  background:currentColor; margin-right:6px; vertical-align:1px; opacity:.5}
+.barbtn[data-live="1"]::before{opacity:1}
+.barbtn[data-live="2"]::before{opacity:1}
+
+/* live game panel */
+.code{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:34px;
+  letter-spacing:.16em; color:var(--green); line-height:1.1}
+:root[data-theme="dark"] .code{color:var(--turf)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .code{color:var(--turf)}}
+input.codein{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:20px;
+  letter-spacing:.12em; text-transform:uppercase}
+
+/* ---------- layout ---------- */
+main{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch}
+.wrap{padding:16px; padding-block:16px 28px; max-width:620px; margin:0 auto}
+.view[hidden]{display:none!important}
+
+/* ---------- bottom nav ---------- */
+nav{
+  flex:0 0 auto; display:flex; background:var(--card); border-top:1px solid var(--line);
+  padding:0 2px calc(env(safe-area-inset-bottom, 0px));
+}
+nav button{
+  flex:1; background:none; border:0; padding:9px 0 10px;
+  font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:10px;
+  text-transform:uppercase; letter-spacing:.01em; color:var(--ink-3);
+  border-top:2px solid transparent; margin-top:-1px;
+}
+nav button[aria-selected="true"]{color:var(--green); border-top-color:var(--brass)}
+
+/* ---------- cards & bits ---------- */
+.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px}
+.panel + .panel{margin-top:14px}
+.stack{display:flex; flex-direction:column; gap:14px}
+.row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.spacer{flex:1 1 auto}
+hr.rule{border:0; border-top:1px solid var(--line-2); margin:14px 0}
+
+.btn{border:1px solid var(--line); background:var(--card); border-radius:10px;
+  padding:9px 14px; font-weight:600; font-size:14px}
+.btn.primary{background:var(--green); border-color:var(--green); color:#F6F4EC}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .btn.primary{background:var(--turf); border-color:var(--turf); color:#0D1411}
+}
+:root[data-theme="dark"] .btn.primary{background:var(--turf); border-color:var(--turf); color:#0D1411}
+.btn.ghost{background:none}
+.btn.small{padding:6px 10px; font-size:13px}
+.btn.danger{color:var(--claret); border-color:var(--claret)}
+.btn[disabled]{opacity:.4; cursor:default}
+
+input[type=text], input[type=number], select, textarea{
+  font:inherit; color:var(--ink); background:var(--card-2);
+  border:1px solid var(--line); border-radius:9px; padding:8px 10px; width:100%;
+}
+textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.4; resize:vertical}
+input[type=number]{font-variant-numeric:tabular-nums}
+label.field{display:block}
+label.field > span{display:block; margin-bottom:4px}
+
+/* ---------- hole strip ---------- */
+.strip{display:flex; gap:7px; overflow-x:auto; padding:2px 16px 12px; scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.strip button{
+  flex:0 0 auto; width:46px; background:var(--card); border:1px solid var(--line);
+  border-radius:11px; padding:6px 0 5px; text-align:center; line-height:1.1;
+}
+.strip button b{display:block; font-family:"Archivo Narrow",sans-serif; font-size:15px}
+.strip button i{display:block; font-style:normal; font-size:11px; color:var(--ink-3);
+  font-variant-numeric:tabular-nums}
+.strip button[aria-current="true"]{border-color:var(--brass); box-shadow:inset 0 0 0 1px var(--brass)}
+.strip button.done i{color:var(--turf); font-weight:700}
+.strip button.over i{color:var(--claret); font-weight:700}
+
+/* ---------- the hole ---------- */
+.hole-head{display:flex; align-items:flex-start; gap:14px}
+.hole-no{
+  flex:0 0 auto; width:52px; height:52px; border-radius:50%;
+  background:var(--green); color:#F6F4EC;
+  display:grid; place-items:center; font-family:"Instrument Serif",serif; font-size:26px;
+}
+:root[data-theme="dark"] .hole-no{background:var(--turf); color:#0D1411}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hole-no{background:var(--turf); color:#0D1411}}
+.venue{font-family:"Instrument Serif",Georgia,serif; font-size:25px; line-height:1.1}
+.drink{margin-top:3px; color:var(--ink-2)}
+.note{margin-top:6px; font-size:13px; color:var(--ink-3)}
+.parbadge{
+  font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:12px;
+  text-transform:uppercase; letter-spacing:.09em; color:var(--brass);
+  border:1px solid var(--brass); border-radius:99px; padding:3px 9px; white-space:nowrap;
+}
+
+.stepper{display:flex; align-items:center; justify-content:center; gap:18px; margin:6px 0 2px}
+.stepper button{width:60px; height:60px; border-radius:50%; border:1px solid var(--line);
+  background:var(--card-2); font-size:28px; line-height:1; font-weight:500}
+.stepper .val{min-width:96px; text-align:center}
+.stepper .val b{display:block; font-family:"Instrument Serif",serif; font-size:52px; line-height:1;
+  font-variant-numeric:tabular-nums}
+.stepper .val b.empty{color:var(--ink-3)}
+.stepper .val span{display:block; margin-top:2px}
+
+.pens{display:flex; flex-wrap:wrap; gap:8px}
+.pen{display:flex; align-items:center; gap:7px; background:var(--chip); color:var(--chip-ink);
+  border:1px solid transparent; border-radius:99px; padding:6px 6px 6px 12px; font-size:13px}
+.pen.on{border-color:var(--claret); color:var(--claret); background:var(--card)}
+.pen .add{border:0; background:none; padding:0 6px; font-size:17px; line-height:1}
+.pen .cnt{font-weight:700; font-variant-numeric:tabular-nums}
+.pen .sub{border:0; background:none; padding:0 4px; font-size:17px; line-height:1; color:inherit}
+.pen .w{font-family:"Archivo Narrow",sans-serif; font-weight:700; color:var(--ink-3)}
+.pen.on .w{color:var(--claret)}
+
+.tally{display:flex; align-items:baseline; gap:10px; justify-content:space-between}
+.tally .big{font-family:"Instrument Serif",serif; font-size:30px; font-variant-numeric:tabular-nums}
+.vs{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-variant-numeric:tabular-nums}
+.vs.under{color:var(--turf)} .vs.over{color:var(--claret)} .vs.level{color:var(--ink-2)}
+
+/* ---------- tables ---------- */
+.scroller{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius); background:var(--card)}
+table{border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px; text-align:right; border-bottom:1px solid var(--line-2); white-space:nowrap}
+th{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:11px;
+  text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3)}
+th:first-child,td:first-child{text-align:left; position:sticky; left:0; background:var(--card)}
+tbody tr:last-child td{border-bottom:0}
+tr.totals td, tr.totals th{border-top:1px solid var(--line); font-weight:700; background:var(--card-2)}
+tr.totals td:first-child{background:var(--card-2)}
+td.blank{color:var(--ink-3)}
+td.over{color:var(--claret); font-weight:600}
+td.under{color:var(--turf); font-weight:600}
+
+/* ---------- leaderboard ---------- */
+.lb{display:flex; flex-direction:column; gap:8px}
+.lb-row{display:grid; grid-template-columns:30px 1fr auto auto; align-items:center; gap:10px;
+  background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 13px}
+.lb-row.lead{border-color:var(--brass)}
+.pos{font-family:"Instrument Serif",serif; font-size:22px; color:var(--ink-3); text-align:center}
+.lb-row.lead .pos{color:var(--brass)}
+.who{font-weight:600; overflow:hidden; text-overflow:ellipsis}
+.who small{display:block; font-weight:400; color:var(--ink-3); font-size:12px}
+.tot{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:19px; font-variant-numeric:tabular-nums}
+details.holes{margin-top:2px}
+details.holes summary{cursor:pointer; font-size:13px; color:var(--ink-2); list-style:none}
+details.holes summary::-webkit-details-marker{display:none}
+details.holes summary span{color:var(--ink-3); font-size:11px}
+details.holes[open] summary span{transform:rotate(180deg); display:inline-block}
+.mini{display:flex; gap:4px; flex-wrap:wrap; margin-top:8px}
+.mini span{min-width:28px; text-align:center; font-size:12px; font-variant-numeric:tabular-nums;
+  border:1px solid var(--line); border-radius:7px; padding:3px 0; color:var(--ink-2)}
+.mini span.u{border-color:var(--turf); color:var(--turf); font-weight:700}
+.mini span.o{border-color:var(--claret); color:var(--claret); font-weight:700}
+
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px}
+.stat{border-left:2px solid var(--brass); padding:2px 0 2px 10px}
+.stat b{display:block; font-family:"Archivo Narrow",sans-serif; font-size:16px}
+
+/* ---------- street map ---------- */
+.mapshell{position:relative; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  background:var(--card)}
+#mapWrap{position:relative; width:100%; height:min(62vh,470px); min-height:300px;
+  touch-action:none; cursor:grab; overflow:hidden}
+#mapWrap:active{cursor:grabbing}
+#mapCanvas{display:block; width:100%; height:100%}
+#mapPins{position:absolute; inset:0; pointer-events:none}
+.mpin{
+  position:absolute; transform:translate(-50%,-50%); pointer-events:auto;
+  width:27px; height:27px; border-radius:50%; border:2px solid var(--card);
+  background:var(--green); color:#F6F4EC; padding:0;
+  font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:13px;
+  font-variant-numeric:tabular-nums; line-height:1;
+  box-shadow:0 2px 6px rgba(0,0,0,.35);
+}
+:root[data-theme="dark"] .mpin{background:var(--turf); color:#0D1411}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mpin{background:var(--turf); color:#0D1411}}
+.mpin.sel{width:34px; height:34px; font-size:15px; border-color:var(--brass); z-index:3}
+.mpin.ap{border-style:dashed; border-color:var(--claret)}
+.mapctl{position:absolute; top:10px; right:10px; display:flex; flex-direction:column; gap:6px; z-index:4}
+.mapctl button{width:36px; height:36px; border-radius:9px; border:1px solid var(--line);
+  background:var(--card); font-size:19px; line-height:1; padding:0; box-shadow:var(--shadow)}
+#mapScale{position:absolute; right:10px; bottom:10px; z-index:4;
+  border:1px solid var(--ink-3); border-top:0; height:9px; min-width:34px;
+  font-family:"Archivo Narrow",sans-serif; font-size:10px; font-weight:700; color:var(--ink-2);
+  text-align:center; line-height:0; padding-bottom:2px; background:transparent;
+  text-shadow:0 0 3px var(--card), 0 0 3px var(--card)}
+#mapCallout{position:absolute; left:10px; right:10px; bottom:10px; z-index:5;
+  background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 12px;
+  box-shadow:var(--shadow)}
+#mapCallout[hidden]{display:none!important}
+.co-h{display:flex; gap:10px; align-items:flex-start}
+.co-n{flex:0 0 auto; width:24px; height:24px; border-radius:50%; background:var(--brass); color:#F6F4EC;
+  display:grid; place-items:center; font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:12px}
+.co-h > div{flex:1; min-width:0}
+.co-h b{display:block}
+.co-h .a{display:block; color:var(--ink-3); font-size:12.5px}
+.co-x{border:0; background:none; font-size:20px; line-height:1; color:var(--ink-3); padding:0 2px}
+.co-play{border:1px solid var(--brass); background:none; color:var(--brass); border-radius:99px;
+  padding:4px 10px; font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:11px;
+  text-transform:uppercase; letter-spacing:.07em}
+
+/* ---------- map legend ---------- */
+.mapbox{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px}
+.mapbox svg{display:block; width:100%; height:auto; max-width:100%}
+.legend{display:flex; flex-direction:column; gap:1px; margin-top:12px}
+.leg{display:grid; grid-template-columns:26px 1fr auto; gap:10px; align-items:baseline;
+  padding:9px 0; border-bottom:1px solid var(--line-2)}
+.leg:last-child{border-bottom:0}
+.leg .n{font-family:"Archivo Narrow",sans-serif; font-weight:700; color:var(--brass);
+  text-align:center; font-variant-numeric:tabular-nums}
+.leg .v{font-weight:600}
+.leg .a{display:block; font-weight:400; color:var(--ink-3); font-size:12.5px}
+.leg .d{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:12px; color:var(--ink-2);
+  font-variant-numeric:tabular-nums; white-space:nowrap}
+.maplinks{display:flex; gap:6px; margin-top:6px; flex-wrap:wrap}
+.maplinks a{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:11px;
+  text-transform:uppercase; letter-spacing:.07em; text-decoration:none;
+  border:1px solid var(--line); border-radius:99px; padding:4px 10px; color:var(--ink-2)}
+.maplinks a:hover{border-color:var(--brass); color:var(--brass)}
+.approx{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:10px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--claret); border:1px solid var(--claret);
+  border-radius:99px; padding:1px 6px; margin-left:5px}
+.resv{display:grid; grid-template-columns:1fr auto; gap:8px; align-items:baseline;
+  padding:8px 0; border-bottom:1px solid var(--line-2)}
+.resv:last-child{border-bottom:0}
+.tag{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:10px; letter-spacing:.06em;
+  text-transform:uppercase; border-radius:99px; padding:2px 7px; white-space:nowrap}
+.tag.in{color:var(--turf); border:1px solid var(--turf)}
+.tag.far{color:var(--claret); border:1px solid var(--claret)}
+.tag.check{color:var(--brass); border:1px solid var(--brass)}
+
+/* ---------- prose ---------- */
+.prose p{margin:0 0 10px; max-width:62ch}
+.prose ol,.prose ul{margin:0 0 10px; padding-left:20px; max-width:62ch}
+.prose li{margin-bottom:5px}
+.prose h3{font-family:"Instrument Serif",serif; font-size:21px; margin:0 0 6px}
+.dress{display:flex; flex-wrap:wrap; gap:6px}
+.dress span{background:var(--chip); color:var(--chip-ink); border-radius:99px; padding:5px 11px; font-size:13px}
+
+/* ---------- setup ---------- */
+.holeedit{border:1px solid var(--line); border-radius:12px; padding:11px; background:var(--card)}
+.holeedit + .holeedit{margin-top:9px}
+.holeedit .hdr{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+.holeedit .hdr b{font-family:"Archivo Narrow",sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:.08em}
+.grid2{display:grid; grid-template-columns:1fr 84px; gap:8px}
+.playerline{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line-2)}
+.playerline:last-child{border-bottom:0}
+.playerline .nm{flex:1; font-weight:600; overflow:hidden; text-overflow:ellipsis}
+.you{font-family:"Archivo Narrow",sans-serif; font-weight:700; font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--brass); border:1px solid var(--brass); border-radius:99px; padding:2px 6px}
+.hint{font-size:13px; color:var(--ink-3); max-width:60ch}
+.tbc{background:var(--chip); color:var(--chip-ink); border-radius:6px; padding:0 5px; font-size:12px;
+  font-family:"Archivo",sans-serif}
+.said{color:var(--turf); font-weight:600; font-size:13px}
+.said.bad{color:var(--claret)}
+.step{display:flex; gap:10px; align-items:flex-start; margin-bottom:10px}
+.step > b{flex:0 0 auto; width:22px; height:22px; border-radius:50%; background:var(--chip); color:var(--chip-ink);
+  display:grid; place-items:center; font-size:12px; font-family:"Archivo Narrow",sans-serif}
+.step div{flex:1; font-size:14px}
+
+/* ---------- identity sheet ---------- */
+.sheet{position:fixed; inset:0; background:rgba(13,20,17,.55); display:grid; place-items:end center; z-index:20; padding:16px}
+.sheet .inner{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px;
+  width:100%; max-width:440px; box-shadow:var(--shadow)}
+.sheet[hidden]{display:none!important}
+.pick{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px}
+.pick button{background:var(--chip); border:1px solid transparent; border-radius:99px; padding:8px 14px; font-weight:600}
+</style>
+</head>
+<body>
+
+
+<header class="bar">
+  <div>
+    <div class="mark" id="barCourse">Pub Golf</div>
+    <div class="sub" id="barSub">Loading</div>
+  </div>
+  <div class="right"><button class="barbtn" type="button" id="netBadge" data-live="0">This phone</button></div>
+</header>
+
+<main>
+  <!-- PLAY -->
+  <section class="view" id="view-play">
+    <div class="strip" id="strip"></div>
+    <div class="wrap" style="padding-top:0">
+      <div class="panel">
+        <div class="hole-head">
+          <div class="hole-no" id="holeNo">1</div>
+          <div style="flex:1 1 auto; min-width:0">
+            <div class="venue" id="holeVenue">—</div>
+            <div class="drink" id="holeDrink"></div>
+            <div class="note" id="holeNote" hidden></div>
+          </div>
+          <span class="parbadge" id="holePar">Par —</span>
+        </div>
+        <hr class="rule">
+        <div class="eyebrow" style="text-align:center">Drinks to finish it</div>
+        <div class="stepper">
+          <button type="button" id="minus" aria-label="One fewer">&minus;</button>
+          <div class="val"><b id="strokeVal" class="empty">–</b><span class="eyebrow" id="strokeHint">Not played</span></div>
+          <button type="button" id="plus" aria-label="One more">+</button>
+        </div>
+        <div class="row" style="justify-content:center; margin-top:10px">
+          <button class="btn small" type="button" id="setPar">Finished on par</button>
+          <button class="btn small ghost" type="button" id="clearHole">Clear</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="eyebrow" style="margin-bottom:9px">Penalties</div>
+        <div class="pens" id="pens"></div>
+      </div>
+
+      <div class="panel">
+        <div class="tally">
+          <div><div class="eyebrow">This hole</div><div class="big" id="holeTotal">–</div></div>
+          <div style="text-align:right">
+            <div class="eyebrow">Round so far</div>
+            <div class="big num" id="roundTotal">0</div>
+            <div class="vs level" id="roundVs">level</div>
+          </div>
+        </div>
+        <hr class="rule">
+        <div class="row">
+          <label class="field" style="flex:1 1 150px">
+            <span class="eyebrow">Scoring for</span>
+            <select id="whoSelect"></select>
+          </label>
+          <button class="btn primary" type="button" id="nextHole" style="align-self:flex-end">Next hole</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CARD -->
+  <section class="view" id="view-card" hidden>
+    <div class="wrap">
+      <h2 class="serif" style="font-size:26px; margin-bottom:2px">Scorecard</h2>
+      <p class="hint" style="margin:0 0 14px">Every score includes penalty strokes. Scroll sideways for the rest of the field. Enter scores on the Play tab.</p>
+      <div class="scroller"><table id="cardTable"></table></div>
+    </div>
+  </section>
+
+  <!-- BOARD -->
+  <section class="view" id="view-board" hidden>
+    <div class="wrap">
+      <h2 class="serif" style="font-size:26px; margin-bottom:2px">Leaderboard</h2>
+      <p class="hint" style="margin:0 0 14px">Ranked against par over the holes each player has finished. Lowest wins.</p>
+      <div class="lb" id="lb"></div>
+      <div class="panel" style="margin-top:16px">
+        <div class="eyebrow" style="margin-bottom:10px">Round notes</div>
+        <div class="stats" id="stats"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="view" id="view-map" hidden>
+    <div class="wrap stack">
+      <div>
+        <h2 class="serif" style="font-size:26px; margin-bottom:2px">The course</h2>
+        <p class="hint" style="margin:0" id="mapIntro"></p>
+      </div>
+      <div class="mapshell">
+        <div id="mapWrap">
+          <canvas id="mapCanvas"></canvas>
+          <div id="mapPins"></div>
+        </div>
+        <div class="mapctl">
+          <button type="button" id="mapIn" aria-label="Zoom in">+</button>
+          <button type="button" id="mapOut" aria-label="Zoom out">&minus;</button>
+        </div>
+        <div id="mapScale"></div>
+        <div id="mapCallout" hidden></div>
+      </div>
+      <div class="row" style="gap:8px">
+        <button class="btn small" type="button" id="mapReset">Whole course</button>
+        <button class="btn small" type="button" id="mapHere">This hole</button>
+        <span class="hint" style="flex:1 1 140px">Drag to pan, pinch to zoom, tap a pin.</span>
+      </div>
+      <div class="panel">
+        <div class="eyebrow" style="margin-bottom:4px">The round, in order</div>
+        <div class="legend" id="mapLegend"></div>
+      </div>
+      <div class="panel" id="mapReserves" hidden>
+        <div class="eyebrow" style="margin-bottom:8px">Reserve list</div>
+        <div id="mapReserveList"></div>
+      </div>
+      <div class="panel">
+        <div class="eyebrow" style="margin-bottom:8px">How much to trust this</div>
+        <p class="hint" style="margin:0">The streets, parks and squares are real OpenStreetMap data, pulled once and built into this page — so the map works with no signal and no roaming. Each venue address was looked up in the same source. Pins marked <span class="approx">approx</span> matched only the street, not the house number, so they could be a few hundred metres out. Distances are straight lines between pins, so real walking is a little further. Nothing here confirms a venue is still open or what time it shuts, so tap through to Google Maps or 2GIS and check before you set off.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RULES -->
+  <section class="view" id="view-rules" hidden>
+    <div class="wrap prose">
+      <h2 class="serif" style="font-size:26px; margin-bottom:10px">Rules of the course</h2>
+      <div class="panel">
+        <h3>How it works</h3>
+        <ol>
+          <li>Each pub is a <b>hole</b>. Each hole has a set drink and a <b>par</b> — the number of goes you're allowed to finish it in.</li>
+          <li>One drink per hole, one hole per pub. Everyone drinks at the same hole.</li>
+          <li>Count how many goes it took to empty the glass. That's your score, plus penalties.</li>
+          <li>Lowest total wins. Being over par is not a moral failing, it's just slow.</li>
+        </ol>
+      </div>
+      <div class="panel">
+        <h3>Penalties</h3>
+        <div class="scroller" style="border-radius:10px"><table id="penTable"></table></div>
+      </div>
+      <div class="panel">
+        <h3>Etiquette</h3>
+        <ul>
+          <li><b>Water and food are free.</b> No penalty, no glory, no argument. Eat something at the turn.</li>
+          <li><b>Nobody gets left behind.</b> The group moves between holes together.</li>
+          <li><b>Any player may retire.</b> Switch to soft drinks and keep scoring the penalties — the round is the point, not the volume.</li>
+          <li><b>The scorer's word is final</b> until the next round of drinks, at which point it is negotiable.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Dress code</h3>
+        <p>Golf, interpreted badly. At least three of:</p>
+        <div class="dress">
+          <span>Polo shirt, collar up</span><span>Argyle socks</span><span>Visor or flat cap</span>
+          <span>Chinos or shorts</span><span>Golf glove</span><span>A club you didn't need to bring</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHARE -->
+  <section class="view" id="view-share" hidden>
+    <div class="wrap stack">
+      <div class="panel">
+        <div class="eyebrow" style="margin-bottom:9px">Live game</div>
+
+        <div id="roomOff">
+          <p class="hint" style="margin:0 0 11px">Start a live game and everyone who opens the link sees scores the moment they're typed. No accounts, no sign-in.</p>
+          <div class="row">
+            <button class="btn primary small" type="button" id="roomCreate">Start a live game</button>
+          </div>
+          <hr class="rule">
+          <label class="field"><span class="eyebrow">Or join one</span>
+            <input type="text" class="codein" id="roomJoin" placeholder="GAME CODE" maxlength="8"
+                   autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+          <div class="row" style="margin-top:9px">
+            <button class="btn small" type="button" id="roomGo">Join</button>
+            <span class="said" id="saidRoom" hidden></span>
+          </div>
+        </div>
+
+        <div id="roomOn" hidden>
+          <div class="code" id="roomCode">------</div>
+          <p class="hint" id="roomState" style="margin:6px 0 11px"></p>
+          <label class="field"><span class="eyebrow">Send this link to the group</span>
+            <input type="text" id="roomLink" readonly></label>
+          <div class="row" style="margin-top:9px">
+            <button class="btn small primary" type="button" id="roomCopy">Copy link</button>
+            <button class="btn small ghost" type="button" id="roomLeave">Leave game</button>
+            <span class="said" id="saidRoom2" hidden></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="serif" style="font-size:26px; margin-bottom:8px">No signal? Use a code</h2>
+        <p class="hint" style="margin:0 0 11px">A live game handles everything above. These codes are the belt and braces: they work with no signal, no server and no accounts at all.</p>
+        <div class="step"><b>1</b><div>Copy the <b>round code</b> and paste it into the group chat. Whoever pastes it in gets the course, the players and every score as they stand.</div></div>
+        <div class="step"><b>2</b><div>If someone scored on their own phone while cut off, they send back a <b>player code</b> and the scorer pastes it to merge just their card.</div></div>
+        <div class="step"><b>3</b><div>Worst case, one phone keeps the whole card using the <b>Scoring for</b> dropdown on the Play tab, and nobody needs a connection at all.</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="row" style="margin-bottom:9px">
+          <div class="eyebrow">Round code</div><div class="spacer"></div>
+          <span class="said" id="saidRound" hidden>Copied</span>
+        </div>
+        <p class="hint" style="margin:0 0 9px">The whole round: course, players and every score.</p>
+        <textarea id="roundCode" rows="4" readonly aria-label="Round code"></textarea>
+        <div class="row" style="margin-top:9px">
+          <button class="btn small primary" type="button" id="copyRound">Copy round code</button>
+          <button class="btn small ghost" type="button" id="copyMine">Copy my player code</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="row" style="margin-bottom:9px">
+          <div class="eyebrow">Load a code</div><div class="spacer"></div>
+          <span class="said" id="saidLoad" hidden></span>
+        </div>
+        <p class="hint" style="margin:0 0 9px">Paste a round code to load the whole round, or a player code to merge that one person's card in.</p>
+        <textarea id="pasteCode" rows="4" placeholder="Paste a code here" aria-label="Paste a code"></textarea>
+        <div class="row" style="margin-top:9px">
+          <button class="btn small primary" type="button" id="loadCode">Load it</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section class="view" id="view-setup" hidden>
+    <div class="wrap stack">
+      <div class="panel">
+        <div class="eyebrow" style="margin-bottom:9px">Course</div>
+        <label class="field" style="margin-bottom:10px">
+          <span class="eyebrow">Name</span>
+          <input type="text" id="courseName" placeholder="Saturday Open">
+        </label>
+        <div class="row">
+          <button class="btn small" type="button" id="loadClassic">The Classic Nine</button>
+          <button class="btn small" type="button" id="loadAlmaty">The Almaty Open</button>
+        </div>
+        <p class="hint" style="margin-top:10px">Loading a course replaces the holes below. Scores are kept.</p>
+      </div>
+
+      <div class="panel" id="reservePanel" hidden>
+        <div class="eyebrow" style="margin-bottom:9px">Almaty reserve list</div>
+        <p class="hint" style="margin:0 0 8px">Swap any hole for one of these if a venue is shut, rammed or charging tourist prices.</p>
+        <div id="reserveList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="row" style="margin-bottom:10px">
+          <div class="eyebrow">Players</div><div class="spacer"></div>
+          <span class="hint num" id="playerCount"></span>
+        </div>
+        <div id="playerList"></div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="newPlayer" placeholder="Add a player" style="flex:1 1 140px">
+          <button class="btn small" type="button" id="addPlayer">Add</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="row" style="margin-bottom:10px">
+          <div class="eyebrow">Holes</div><div class="spacer"></div>
+          <span class="hint" id="parTotal"></span>
+        </div>
+        <div id="holeList"></div>
+        <button class="btn small" type="button" id="addHole" style="margin-top:10px">Add a hole</button>
+      </div>
+
+      <div class="panel">
+        <div class="eyebrow" style="margin-bottom:9px">Penalty strokes</div>
+        <div id="penList"></div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="newPenName" placeholder="Penalty" style="flex:1 1 130px">
+          <input type="number" id="newPenVal" value="1" min="0" max="20" style="width:74px">
+          <button class="btn small" type="button" id="addPen">Add</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="eyebrow" style="margin-bottom:9px">Danger zone</div>
+        <div class="row">
+          <button class="btn small danger" type="button" id="resetScores">Clear all scores</button>
+          <button class="btn small ghost" type="button" id="changeWho">Change who I am</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav id="tabs">
+  <button type="button" data-tab="play" aria-selected="true">Play</button>
+  <button type="button" data-tab="card" aria-selected="false">Card</button>
+  <button type="button" data-tab="board" aria-selected="false">Board</button>
+  <button type="button" data-tab="map" aria-selected="false">Map</button>
+  <button type="button" data-tab="rules" aria-selected="false">Rules</button>
+  <button type="button" data-tab="share" aria-selected="false">Share</button>
+  <button type="button" data-tab="setup" aria-selected="false">Setup</button>
+</nav>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="inner">
+    <h2 class="serif" style="font-size:24px">Who's playing on this phone?</h2>
+    <p class="hint" style="margin:6px 0 0">Pick your name so your scores land on your card. You can still score for someone else from the Play tab.</p>
+    <div class="pick" id="pick"></div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="sheetName" placeholder="Or type your name" style="flex:1 1 140px">
+      <button class="btn primary small" type="button" id="sheetAdd">Join</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn small ghost" type="button" id="sheetSkip">Just watching</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ======================= courses & defaults ======================= */
+
+const DEFAULT_PENS = [
+  {id:"spill", name:"Spillage",           strokes:1},
+  {id:"hand",  name:"Wrong hand",         strokes:1},
+  {id:"loo",   name:"Toilet mid-hole",    strokes:2},
+  {id:"left",  name:"Left some in glass", strokes:3},
+  {id:"lost",  name:"Lost the group",     strokes:2},
+  {id:"sick",  name:"Being sick",         strokes:5}
+];
+
+const CLASSIC = {
+  name: "The Classic Nine",
+  holes: [
+    {venue:"", drink:"Pint of lager",       par:4, note:""},
+    {venue:"", drink:"Bottle of cider",     par:3, note:""},
+    {venue:"", drink:"Single vodka & coke", par:2, note:""},
+    {venue:"", drink:"Pint of stout",       par:5, note:"The long hole. Pace yourself."},
+    {venue:"", drink:"Jägerbomb",           par:1, note:"Hole in one or nothing."},
+    {venue:"", drink:"Glass of house red",  par:3, note:""},
+    {venue:"", drink:"Alcopop",             par:2, note:""},
+    {venue:"", drink:"Rum & coke",          par:2, note:""},
+    {venue:"", drink:"Pint of ale",         par:4, note:"The nineteenth is where the arguing happens."}
+  ]
+};
+
+/* The Almaty Open.
+   Coordinates came from OpenStreetMap lookups of each street address.
+   ok:1 = the lookup matched the actual house number.
+   ok:0 = only the street matched, so the pin is approximate.
+   The order is a south-to-north walk computed from those coordinates:
+   4.6 km and about an hour of walking in total, and Almaty slopes down
+   away from the mountains, so the round runs downhill. */
+const ALMATY = {
+  name: "The Almaty Open",
+  holes: [
+    {venue:"Yard House Pub",      drink:"Pint of lager",      par:4, note:"Dostyk Ave 2 · Russian beer and Mexican food. The first tee, and the top of the hill.", lat:43.24144, lon:76.95616, ok:1},
+    {venue:"Guns & Roses Pub",    drink:"Glass of white",      par:3, note:"Dostyk Ave 52 · Cold beer, live music, lounge seating. 380 m north.", lat:43.24465, lon:76.95781, ok:1},
+    {venue:"Americano",           drink:"House cocktail",      par:3, note:"Kurmangazy St 56 · Speakeasy with live jazz. 100 m — behave yourselves.", lat:43.24548, lon:76.95824, ok:0},
+    {venue:"Guinness Pub",        drink:"Half of stout",       par:3, note:"Dostyk Ave 71 · The city's big stout pub. 170 m west.", lat:43.24599, lon:76.95623, ok:1},
+    {venue:"Frau Irma",           drink:"Half of wheat beer",  par:3, note:"Kurmangazy St 33 · German, generous portions. 600 m west — eat here, this is the turn.", lat:43.24502, lon:76.94890, ok:1},
+    {venue:"Glen Pub",            drink:"Dram of whisky",      par:2, note:"Shevchenko St 44 · Scottish, long whisky list. 150 m north.", lat:43.24632, lon:76.94883, ok:1},
+    {venue:"The Shakespeare Pub", drink:"Pint of draught",     par:4, note:"Dostyk Ave 40 · Wood-panelled English pub. 960 m north-east — the long walk.", lat:43.25312, lon:76.95619, ok:1},
+    {venue:"SOHO bar-concert",    drink:"Vodka & tonic",       par:2, note:"Kazybek Bi St 65 · Live soul, rock and blues nightly. 940 m west.", lat:43.25688, lon:76.94588, ok:1},
+    {venue:"Шишка Lounge",        drink:"Brandy & cola",       par:2, note:"Zhibek Zholy 66 · Shisha and horse meat. 1.3 km east. Order the horse.", lat:43.26295, lon:76.95899, ok:0}
+  ]
+};
+
+const ALMATY_RESERVES = [
+  ["Barfly",            "Dostyk Ave 52/2 · Rooftop, city views — same building as hole 2", "in"],
+  ["The Old English Pub","Mametova St 76a · Cosy, long ale list — but 2.6 km west of the course", "far"],
+  ["Nuala",             "Bogenbay Batyr St 134 · New Zealand kitchen, long wine list — address wouldn't verify", "check"],
+  ["All Saints Bar",    "Chaykovskiy St 170 · 32 taps — address wouldn't verify", "check"],
+  ["Harat's Pub",       "Panfilov St 110 · Irish, live bands, pricey", "in"],
+  ["Bar Pivnitsa",      "Zhambyl St 174 · Cheap beer and a terrace — 3.5 km west, taxi", "far"],
+  ["Hopers Bar",        "Gagarin Ave 93a · ~25 draught, 100+ bottles — 5 km out, taxi", "far"],
+  ["Barmaglot",         "Satpaev St 3 · World's 50 Best list — save it for the night after", "in"]
+];
+
+/* ======================= state ======================= */
+
+const LS_KEY = "pubgolf.v3";
+const LS_ME  = "pubgolf.me";
+const LS_TAB = "pubgolf.tab";
+const LS_ME_NAME = "pubgolf.mename";
+
+let setup = null, players = {}, me = null, scoringFor = null, hole = 1, tab = "play";
+
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => (
+  {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function normaliseSetup(s){
+  return {
+    name: (s && s.name) || "Pub Golf",
+    holes: (s && Array.isArray(s.holes) && s.holes.length ? s.holes : CLASSIC.holes).map(h => ({
+      venue:h.venue||"", drink:h.drink||"", par:Math.max(1, +h.par||1), note:h.note||"",
+      lat: h.lat == null ? null : +h.lat, lon: h.lon == null ? null : +h.lon, ok: h.ok ? 1 : 0
+    })),
+    pens: (s && Array.isArray(s.pens) && s.pens.length ? s.pens : DEFAULT_PENS).map(p => ({
+      id:p.id||uid(), name:p.name||"Penalty", strokes:Math.max(0, +p.strokes||0)
+    }))
+  };
+}
+function freshSetup(c){
+  return normaliseSetup({name:c.name, holes:c.holes.map(h => Object.assign({}, h)), pens:DEFAULT_PENS});
+}
+
+/* ======================= scoring ======================= */
+
+function penStrokes(h){
+  if(!h || !h.pens) return 0;
+  let t = 0;
+  for(const p of setup.pens) t += (h.pens[p.id] || 0) * p.strokes;
+  return t;
+}
+function entry(pid, n){ const p = players[pid]; return p && p.holes ? p.holes[String(n)] : null; }
+function holeScore(pid, n){
+  const h = entry(pid, n);
+  if(!h || h.s == null) return null;
+  return (+h.s || 0) + penStrokes(h);
+}
+function parOf(n){ const h = setup.holes[n-1]; return h ? h.par : 0; }
+function totalPar(){ return setup.holes.reduce((a,h) => a + h.par, 0); }
+
+function summary(pid){
+  let total = 0, played = 0, parPlayed = 0, pens = 0, best = null;
+  for(let n = 1; n <= setup.holes.length; n++){
+    const s = holeScore(pid, n);
+    if(s == null) continue;
+    total += s; played++; parPlayed += parOf(n); pens += penStrokes(entry(pid,n));
+    const d = s - parOf(n);
+    if(best == null || d < best.d) best = {n, d, s};
+  }
+  return {total, played, parPlayed, vs: total - parPlayed, pens, best};
+}
+function vsText(v){ return v === 0 ? "level" : (v > 0 ? "+" + v : String(v)); }
+function vsClass(v){ return v === 0 ? "level" : (v > 0 ? "over" : "under"); }
+
+/* ======================= persistence ======================= */
+
+function save(){ lsSet(LS_KEY, JSON.stringify({setup, players})); }
+
+/* ======================= share codes ======================= */
+
+function b64e(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function b64d(s){
+  s = String(s).trim().replace(/\s+/g,"").replace(/-/g,"+").replace(/_/g,"/");
+  while(s.length % 4) s += "=";
+  const bin = atob(s);
+  const bytes = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function packHoles(hs){
+  const o = {};
+  for(const k in (hs || {})){
+    const e = hs[k], pens = [];
+    for(const pk in (e.pens || {})) if(e.pens[pk]) pens.push([pk, e.pens[pk]]);
+    if(e.s != null || pens.length) o[k] = [e.s == null ? null : +e.s, pens];
+  }
+  return o;
+}
+function unpackHoles(o){
+  const hs = {};
+  for(const k in (o || {})){
+    const a = o[k] || [], pens = {};
+    (a[1] || []).forEach(p => { if(p && p[0]) pens[p[0]] = +p[1] || 0; });
+    hs[k] = {s: a[0] == null ? null : +a[0], pens};
+  }
+  return hs;
+}
+
+function roundCode(){
+  const d = {v:3, t:"r", n:setup.name,
+    h: setup.holes.map(h => [h.venue, h.drink, h.par, h.note, h.lat, h.lon, h.ok]),
+    x: setup.pens.map(p => [p.id, p.name, p.strokes]),
+    p: sortedPlayerIds().map(id => [players[id].name, packHoles(players[id].holes)])};
+  return "PG1." + b64e(JSON.stringify(d));
+}
+function playerCode(pid){
+  const p = players[pid];
+  if(!p) return "";
+  return "PG1." + b64e(JSON.stringify({v:3, t:"p", n:p.name, k:packHoles(p.holes)}));
+}
+
+function loadCode(raw){
+  let s = String(raw || "").trim();
+  if(!s) return {ok:false, msg:"Nothing pasted."};
+  const i = s.indexOf("PG1.");
+  if(i < 0) return {ok:false, msg:"That doesn't look like a pub golf code."};
+  s = s.slice(i + 4).split(/\s/)[0];
+  let d;
+  try{ d = JSON.parse(b64d(s)); }
+  catch(e){ return {ok:false, msg:"That code is damaged — copy the whole thing and try again."}; }
+
+  if(d.t === "r"){
+    setup = normaliseSetup({
+      name: d.n,
+      holes: (d.h || []).map(a => ({venue:a[0], drink:a[1], par:a[2], note:a[3], lat:a[4], lon:a[5], ok:a[6]})),
+      pens: (d.x || []).map(a => ({id:a[0], name:a[1], strokes:a[2]}))
+    });
+    const keepMe = me && players[me] ? players[me].name : null;
+    players = {}; let t = Date.now();
+    (d.p || []).forEach(a => { players[uid()] = {name:a[0] || "Player", holes:unpackHoles(a[1]), joined:t++}; });
+    me = null;
+    if(keepMe){
+      const found = sortedPlayerIds().filter(id => players[id].name.toLowerCase() === keepMe.toLowerCase())[0];
+      if(found){ me = found; lsSet(LS_ME, me); }
+    }
+    scoringFor = me || sortedPlayerIds()[0] || null;
+    hole = 1; save();
+    if(net.code) net.send({t:"batch", ops:[setOp(["setup"], setup), setOp(["players"], players)]});
+    render();
+    return {ok:true, msg:"Loaded " + setup.name + " — " + Object.keys(players).length + " players."};
+  }
+
+  if(d.t === "p"){
+    const name = (d.n || "Player").trim();
+    let id = sortedPlayerIds().filter(x => players[x].name.toLowerCase() === name.toLowerCase())[0];
+    if(!id){ id = uid(); players[id] = {name, holes:{}, joined:Date.now()}; }
+    players[id].holes = unpackHoles(d.k);
+    if(!scoringFor) scoringFor = id;
+    save();
+    if(net.code) net.send(setOp(["players", id], players[id]));
+    render();
+    return {ok:true, msg:"Merged " + name + "'s card."};
+  }
+  return {ok:false, msg:"Unknown code type."};
+}
+
+async function copyText(text, textareaId){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){}
+  try{
+    const ta = document.getElementById(textareaId);
+    ta.value = text; ta.removeAttribute("readonly");
+    ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand && document.execCommand("copy");
+    ta.setAttribute("readonly","readonly");
+    if(ok) return true;
+  }catch(e){}
+  return false;
+}
+
+/* ==================================================================
+   Live sync.
+
+   An edit is sent as "set this path to this value", never as a whole
+   game, so two people scoring different holes never overwrite each
+   other. The server is the referee: it applies ops in the order they
+   arrive, numbers each one, and relays it to everyone else.
+
+   Offline is the normal case on a pub crawl, not an error. Edits made
+   with no connection are applied locally, queued, and replayed on
+   reconnect. The server's copy always wins on reconnect, so a phone
+   that was out of signal for three holes catches up rather than
+   fighting.
+   ================================================================== */
+
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";  /* no O/0/I/1/L */
+const LS_CODE = "pubgolf.code";
+
+function newCode(){
+  let s = "";
+  const a = new Uint32Array(6);
+  (crypto && crypto.getRandomValues) ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.random() * 1e9);
+  for(let i = 0; i < 6; i++) s += CODE_ALPHABET[a[i] % CODE_ALPHABET.length];
+  return s;
+}
+
+/* Apply one op to this phone's copy. Deliberately the same shape as
+   the server's applyOp in src/ops.js — keep the two in step. */
+function applyLocal(op){
+  if(!op) return;
+  if(op.t === "batch"){ (op.ops || []).forEach(applyLocal); return; }
+  const p = op.p;
+  if(!Array.isArray(p) || !p.length) return;
+
+  if(p.length === 1){
+    if(p[0] === "setup") setup = normaliseSetup(op.t === "del" ? null : op.v);
+    else if(p[0] === "players") players = (op.t === "del" || !op.v) ? {} : op.v;
+    return;
+  }
+  let node = p[0] === "setup" ? setup : (p[0] === "players" ? players : null);
+  if(!node) return;
+  for(let i = 1; i < p.length - 1; i++){
+    const k = p[i];
+    if(node[k] == null || typeof node[k] !== "object"){
+      if(op.t === "del") return;
+      node[k] = {};
+    }
+    node = node[k];
+  }
+  const last = p[p.length - 1];
+  if(op.t === "del") delete node[last]; else node[last] = op.v;
+}
+
+/* Make an edit: apply here, keep it, tell the server. */
+function emit(op){
+  applyLocal(op);
+  save();
+  net.send(op);
+  render();
+}
+const setOp = (p, v) => ({t:"set", p, v});
+const delOp = p => ({t:"del", p});
+
+const net = {
+  code: null, ws: null, status: "local", pending: [], seq: 0, lastError: null,
+  tries: 0, retry: 0, pinger: 0, adopting: false,
+
+  url(kind){
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    if(kind === "ws") return proto + "//" + location.host + "/api/" + this.code + "/ws";
+    return location.origin + "/api/" + this.code + "/" + kind;
+  },
+
+  shareLink(){ return this.code ? location.origin + "/g/" + this.code : ""; },
+
+  join(code, seedIfEmpty){
+    code = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if(code.length < 4) return "That code is too short.";
+    for(const c of code) if(CODE_ALPHABET.indexOf(c) < 0) return "That code has a character we don't use (no O, 0, I, 1 or L).";
+    this.leave(true);
+    this.code = code;
+    this.seed = !!seedIfEmpty;
+    lsSet(LS_CODE, code);
+    this.connect();
+    return null;
+  },
+
+  leave(quiet){
+    clearTimeout(this.retry); clearInterval(this.pinger);
+    if(this.ws){ try{ this.ws.close(); }catch(e){} }
+    this.ws = null; this.code = null; this.pending = []; this.status = "local";
+    lsSet(LS_CODE, "");
+    if(!quiet){ renderNet(); render(); }
+  },
+
+  connect(){
+    if(!this.code) return;
+    clearTimeout(this.retry);
+    this.status = this.pending.length ? "offline" : "connecting";
+    renderNet();
+    let ws;
+    try{ ws = new WebSocket(this.url("ws")); }
+    catch(e){ return this.backoff(); }
+    this.ws = ws;
+
+    ws.onopen = () => {
+      this.tries = 0; this.status = "live"; renderNet();
+      clearInterval(this.pinger);
+      this.pinger = setInterval(() => {
+        try{ ws.send(JSON.stringify({t:"ping"})); }catch(e){}
+      }, 25000);
+    };
+    ws.onmessage = ev => {
+      let m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+      this.handle(m);
+    };
+    ws.onclose = () => { if(this.ws === ws) this.backoff(); };
+    ws.onerror = () => { /* onclose follows */ };
+  },
+
+  backoff(){
+    clearInterval(this.pinger);
+    this.ws = null;
+    if(!this.code) return;
+    this.status = "offline"; renderNet();
+    this.tries = Math.min(this.tries + 1, 6);
+    const wait = Math.min(20000, 700 * Math.pow(1.8, this.tries)) + Math.random() * 400;
+    this.retry = setTimeout(() => this.connect(), wait);
+  },
+
+  handle(m){
+    if(m.t === "pong") return;
+
+    if(m.t === "state"){
+      const empty = !m.game || (m.game.setup == null && !Object.keys(m.game.players || {}).length);
+      if(empty && this.seed){
+        /* First one into a new game: hand the server what this phone has.
+           Keep the flag until the server actually accepts it, so a refused
+           seed is retried rather than lost. */
+        this.send({t:"batch", ops:[setOp(["setup"], setup), setOp(["players"], players)]});
+        this.status = "live"; renderNet(); return;
+      }
+      if(!empty){
+        setup = normaliseSetup(m.game.setup);
+        players = m.game.players || {};
+        if(me && !players[me]) me = null;
+        if(scoringFor && !players[scoringFor]) scoringFor = me || sortedPlayerIds()[0] || null;
+        if(!me){
+          /* Re-find myself by name if this phone knew who it was. */
+          const wanted = lsGet(LS_ME_NAME);
+          if(wanted){
+            const hit = sortedPlayerIds().filter(id => players[id].name.toLowerCase() === wanted.toLowerCase())[0];
+            if(hit){ me = hit; scoringFor = scoringFor || hit; lsSet(LS_ME, hit); }
+          }
+        }
+        save();
+      }
+      /* Anything this phone did while offline goes back up now. */
+      const q = this.pending.slice();
+      this.pending = [];
+      q.forEach(x => this.send(x.op));
+      this.status = "live";
+      renderNet(); render();
+      return;
+    }
+
+    if(m.t === "op"){ this.seed = false; applyLocal(m.op); save(); renderNet(); render(); return; }
+
+    if(m.t === "ack"){
+      this.pending = this.pending.filter(x => x.id !== m.id);
+      if(m.error){
+        /* Refused. Say so rather than letting this phone drift away from
+           everyone else, and take the server's copy as the truth. */
+        this.lastError = m.error;
+        try{ this.ws.send(JSON.stringify({t:"sync"})); }catch(e){}
+      } else {
+        this.lastError = null;
+        this.seed = false;
+      }
+      renderNet();
+      return;
+    }
+  },
+
+  send(op){
+    if(!this.code) return;
+    const id = ++this.seq;
+    this.pending.push({id, op});
+    if(this.ws && this.ws.readyState === 1){
+      try{ this.ws.send(JSON.stringify({t:"op", id, op})); }
+      catch(e){ /* stays queued */ }
+    }
+    renderNet();
+  }
+};
+
+function renderNet(){
+  const el = document.getElementById("netBadge");
+  if(!el) return;
+  const n = net.pending.length;
+  let label, live = "0";
+  if(!net.code){ label = "This phone"; }
+  else if(net.status === "live" && !n){ label = "Live · " + net.code; live = "1"; }
+  else if(net.status === "live"){ label = "Saving · " + net.code; live = "1"; }
+  else if(net.status === "connecting"){ label = "Connecting"; }
+  else { label = n ? n + " to send · " + net.code : "Offline · " + net.code; live = "2"; }
+  el.dataset.live = live;
+  el.textContent = label;
+
+  const on = !!net.code;
+  const box = document.getElementById("roomOn"), off = document.getElementById("roomOff");
+  if(box && off){
+    box.hidden = !on; off.hidden = on;
+    if(on){
+      document.getElementById("roomCode").textContent = net.code;
+      document.getElementById("roomLink").value = net.shareLink();
+      document.getElementById("roomState").textContent =
+        net.lastError
+          ? "The server refused that change (" + net.lastError + "). Your copy has been put back in step with everyone else's."
+          : net.status === "live"
+            ? (n ? n + " edit" + (n === 1 ? "" : "s") + " still going up" : "Everyone on this code sees scores as they're typed.")
+            : "No connection right now. Keep scoring — it'll all go up when you're back.";
+    }
+  }
+}
+
+/* ======================= rendering ======================= */
+
+function render(){
+  if(!setup) return;
+  hole = Math.min(Math.max(1, hole), setup.holes.length);
+  if(scoringFor && !players[scoringFor]) scoringFor = me;
+  document.getElementById("barCourse").textContent = setup.name;
+  const n = Object.keys(players).length;
+  document.getElementById("barSub").textContent =
+    setup.holes.length + " holes · par " + totalPar() + " · " + n + (n === 1 ? " player" : " players");
+  renderStrip(); renderHole(); renderPens(); renderTally();
+  renderWhoSelect(); renderCard(); renderBoard(); renderMap(); renderPenTable(); renderSetup();
+  const rc = document.getElementById("roundCode");
+  if(document.activeElement !== rc) rc.value = roundCode();
+  document.getElementById("copyMine").disabled = !me;
+  renderNet();
+}
+
+function renderStrip(){
+  document.getElementById("strip").innerHTML = setup.holes.map((h,i) => {
+    const num = i + 1;
+    const s = scoringFor ? holeScore(scoringFor, num) : null;
+    const cls = s == null ? "" : ((s - h.par) > 0 ? "over" : "done");
+    return '<button type="button" data-hole="'+num+'" class="'+cls+'" aria-current="'+(num===hole)+'">'
+      + '<b>'+num+'</b><i>'+(s == null ? "par "+h.par : s)+'</i></button>';
+  }).join("");
+}
+
+function renderHole(){
+  const h = setup.holes[hole-1] || {venue:"",drink:"",par:1,note:""};
+  document.getElementById("holeNo").textContent = hole;
+  document.getElementById("holeVenue").innerHTML = h.venue
+    ? esc(h.venue)
+    : '<span style="color:var(--ink-3)">Pub '+hole+' <span class="tbc">name it in Setup</span></span>';
+  document.getElementById("holeDrink").textContent = h.drink || "No drink set";
+  const note = document.getElementById("holeNote");
+  note.hidden = !h.note; note.textContent = h.note || "";
+  document.getElementById("holePar").textContent = "Par " + h.par;
+
+  const e = scoringFor ? entry(scoringFor, hole) : null;
+  const val = document.getElementById("strokeVal"), hint = document.getElementById("strokeHint");
+  if(e && e.s != null){
+    val.textContent = e.s; val.classList.remove("empty");
+    hint.textContent = (+e.s === 1 ? "one go" : e.s + " goes") + " · par " + h.par;
+  } else {
+    val.textContent = "–"; val.classList.add("empty");
+    hint.textContent = "Not played";
+  }
+  document.getElementById("minus").disabled = !scoringFor || !e || e.s == null || e.s <= 0;
+  document.getElementById("plus").disabled = !scoringFor;
+  document.getElementById("setPar").disabled = !scoringFor;
+  document.getElementById("clearHole").disabled = !scoringFor || !e;
+  document.getElementById("nextHole").textContent = hole >= setup.holes.length ? "Back to hole 1" : "Next hole";
+}
+
+function renderPens(){
+  const e = scoringFor ? entry(scoringFor, hole) : null;
+  const counts = (e && e.pens) || {};
+  document.getElementById("pens").innerHTML = setup.pens.map(p => {
+    const c = counts[p.id] || 0;
+    return '<span class="pen '+(c?"on":"")+'">' + esc(p.name) + ' <span class="w">+'+p.strokes+'</span>'
+      + (c ? '<button type="button" class="sub" data-pensub="'+p.id+'" aria-label="Remove one '+esc(p.name)+'">&minus;</button><span class="cnt">'+c+'</span>' : '')
+      + '<button type="button" class="add" data-penadd="'+p.id+'" aria-label="Add '+esc(p.name)+'">+</button></span>';
+  }).join("");
+}
+
+function renderTally(){
+  const s = scoringFor ? holeScore(scoringFor, hole) : null;
+  const pen = penStrokes(scoringFor ? entry(scoringFor, hole) : null);
+  document.getElementById("holeTotal").innerHTML = s == null ? "–"
+    : '<span class="num">'+s+'</span>' + (pen ? ' <span class="vs over" style="font-size:14px">incl. +'+pen+'</span>' : '');
+  const sum = scoringFor ? summary(scoringFor) : {total:0, vs:0, played:0};
+  document.getElementById("roundTotal").textContent = sum.total;
+  const vs = document.getElementById("roundVs");
+  vs.textContent = vsText(sum.vs) + " · thru " + sum.played;
+  vs.className = "vs " + vsClass(sum.vs);
+}
+
+function sortedPlayerIds(){
+  return Object.keys(players).sort((a,b) =>
+    (players[a].joined||0) - (players[b].joined||0) || players[a].name.localeCompare(players[b].name));
+}
+
+function renderWhoSelect(){
+  const sel = document.getElementById("whoSelect"), ids = sortedPlayerIds();
+  sel.innerHTML = ids.length
+    ? ids.map(id => '<option value="'+id+'"'+(id===scoringFor?" selected":"")+'>'
+        + esc(players[id].name) + (id===me ? " (you)" : "") + '</option>').join("")
+    : '<option value="">No players yet</option>';
+  sel.disabled = !ids.length;
+}
+
+function renderCard(){
+  const ids = sortedPlayerIds(), t = document.getElementById("cardTable");
+  if(!ids.length){ t.innerHTML = '<tbody><tr><td class="blank">Add players in Setup to start a card.</td></tr></tbody>'; return; }
+  const head = '<thead><tr><th>Hole</th><th>Par</th>'
+    + ids.map(id => '<th>'+esc(players[id].name.split(" ")[0])+'</th>').join("") + '</tr></thead>';
+  const body = '<tbody>' + setup.holes.map((h,i) => {
+    const n = i + 1;
+    return '<tr><td>'+n+(h.venue ? ' <span style="color:var(--ink-3)">'+esc(h.venue)+'</span>' : '')+'</td><td>'+h.par+'</td>'
+      + ids.map(id => {
+          const s = holeScore(id, n);
+          let cls = "blank";
+          if(s != null){ const d = s - h.par; cls = d > 0 ? "over" : (d < 0 ? "under" : ""); }
+          return '<td class="'+cls+'">'+(s == null ? "–" : s)+'</td>';
+        }).join("") + '</tr>';
+  }).join("");
+  const totals = '<tr class="totals"><td>Total</td><td>'+totalPar()+'</td>'
+    + ids.map(id => '<td>'+summary(id).total+'</td>').join("") + '</tr>'
+    + '<tr class="totals"><td>To par</td><td>–</td>'
+    + ids.map(id => '<td>'+vsText(summary(id).vs)+'</td>').join("") + '</tr>';
+  t.innerHTML = head + body + totals + '</tbody>';
+}
+
+function renderBoard(){
+  const ids = sortedPlayerIds(), el = document.getElementById("lb");
+  if(!ids.length){
+    el.innerHTML = '<p class="hint">No players yet. Add the group in Setup.</p>';
+    document.getElementById("stats").innerHTML = ""; return;
+  }
+  const rows = ids.map(id => ({id, s:summary(id), name:players[id].name}))
+    .sort((a,b) => a.s.vs - b.s.vs || b.s.played - a.s.played || a.name.localeCompare(b.name));
+  el.innerHTML = rows.map((r,i) => {
+    const mini = setup.holes.map((h,j) => {
+      const s = holeScore(r.id, j+1);
+      if(s == null) return '<span>–</span>';
+      const d = s - h.par;
+      return '<span class="'+(d>0?"o":(d<0?"u":""))+'">'+s+'</span>';
+    }).join("");
+    return '<div class="lb-row'+(i===0 && r.s.played ? " lead" : "")+'">'
+      + '<div class="pos">'+(i+1)+'</div>'
+      + '<div class="who">'+esc(r.name)+(r.id===me?' <span class="you">you</span>':'')
+        + '<small>thru '+r.s.played+' of '+setup.holes.length
+        + (r.s.pens ? ' · +'+r.s.pens+(r.s.pens===1?' penalty stroke':' penalty strokes') : '')+'</small></div>'
+      + '<div class="tot num">'+r.s.total+'</div>'
+      + '<div class="vs '+vsClass(r.s.vs)+'">'+vsText(r.s.vs)+'</div>'
+      + '<details class="holes" style="grid-column:1/-1"><summary>Hole by hole <span aria-hidden="true">&#9662;</span></summary>'
+      + '<div class="mini">'+mini+'</div></details></div>';
+  }).join("");
+
+  const played = rows.filter(r => r.s.played), stats = [];
+  if(played.length){
+    const bestHole = played.reduce((a,r) => (r.s.best && (!a || r.s.best.d < a.s.best.d)) ? r : a, null);
+    if(bestHole && bestHole.s.best){
+      const b = bestHole.s.best;
+      stats.push(["Shot of the round", esc(bestHole.name) + " — " + b.s + " on hole " + b.n + " (" + vsText(b.d) + ")"]);
+    }
+    const mostPens = played.reduce((a,r) => r.s.pens > (a ? a.s.pens : -1) ? r : a, null);
+    if(mostPens && mostPens.s.pens) stats.push(["Most penalised", esc(mostPens.name) + " — +" + mostPens.s.pens]);
+    const done = Math.min.apply(null, played.map(r => r.s.played));
+    stats.push(["Group position", done >= setup.holes.length ? "Round complete"
+      : "Hole " + Math.min(setup.holes.length, done + 1) + " of " + setup.holes.length]);
+    const field = played.reduce((a,r) => a + r.s.total, 0);
+    stats.push(["Field total", field + " strokes across " + played.length + (played.length===1?" player":" players")]);
+  } else {
+    stats.push(["Not started", "No scores in yet. First drink is on the first tee."]);
+  }
+  document.getElementById("stats").innerHTML = stats.map(s =>
+    '<div class="stat"><div class="eyebrow">'+s[0]+'</div><b>'+s[1]+'</b></div>').join("");
+}
+
+/* ---------- map helpers ---------- */
+
+const KLAT = 111130, KLON = 111320 * Math.cos(43.25 * Math.PI / 180); // metres per degree
+
+function metres(a, b){
+  const dx = (b.lon - a.lon) * KLON, dy = (b.lat - a.lat) * KLAT;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+function distText(m){ return m < 950 ? Math.round(m/10)*10 + " m" : (m/1000).toFixed(1) + " km"; }
+
+function mapsLink(h){
+  const q = h.lat != null && h.lon != null
+    ? h.lat + "," + h.lon
+    : [h.venue, (h.note||"").split("·")[0], "Almaty"].filter(Boolean).join(" ");
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+function gisLink(h){
+  const q = [h.venue, (h.note||"").split("·")[0]].filter(Boolean).join(" ").trim() || "bar";
+  return "https://2gis.kz/almaty/search/" + encodeURIComponent(q);
+}
+
+
+/* ===== baked-in OpenStreetMap geometry for central Almaty ===== */
+const MAP_ROADS = `d|Abylay Khan Avenue|4324204,7694312;15,-2
+d|Kazybek Bi Street|4325779,7696350;-4,-60;-4,-57;-3,-41;-2,-29;-10,-146;-2,-25;-2,-28;-5,-76;-3,-42
+c|Abay avenue|4324313,7695692;-1,-22;-3,-40;-2,-38;-15,-242;-12,-174;-10,-132;-2,-27;-2,-32;-8,-122;-2,-31
+d|Pushkin Street|4326052,7695300;44,-6;55,-7;15,-2;73,-9;15,-2
+d|Mukagali Makataev Street|4326513,7696189;2,33;2,32;2,35;2,43;4,70;1,28;2,28;2,30;3,49;2,52;4,52
+d|Baribayev Street|4325779,7696350;44,-5;34,-4;41,-5;39,-4;21,-3;18,-2;56,-7;16,-2;53,-6;20,-2;56,-7;21,-3;47,-6;15,-1;18,-3;27,-3;12,-1
+p|Karasay Batyr Street|4325202,7695392;-10,-143;-1,-11
+d|Kabanbay Batyr Street|4325141,7696857;-5,-71;-3,-62;-3,-33;-2,-35;-4,-50;-7,-64;-5,-54;-4,-43;-12,-160;-2,-20;-4,-62;-5,-81;-3,-38;-2,-37;-3,-30;-4,-54;-1,-18
+c|Mukagali Makataev Street|4326407,7694555;-13,-157;-2,-33;-2,-34;-3,-41;-5,-64;-3,-48;-2,-23;-3,-40;-5,-64;-1,-17
+c|Nazarbayev Avenue|4326731,7694515;-82,10;-71,9;-47,6
+c|Nazarbayev Avenue|4325662,7694647;-79,12;-58,9;-16,3;-10,1
+c|Nazarbayev Avenue|4325166,7694714;-14,2
+c|Nazarbayev Avenue|4324817,7694760;-66,8;-46,6;-36,5;-22,3
+c|Nazarbayev Avenue|4324647,7694782;-19,2;-23,3
+c|Nazarbayev Avenue|4324473,7694804;-67,9;-29,4
+d|Konaev Street|4324495,7695150;-46,5;-40,5;-55,7;-61,8;-13,1
+c|Mukagali Makataev Street|4326484,7695752;4,54
+c|Nazarbayev Avenue|4326531,7694540;-66,8
+p|Shokan Valikhanov Street|4324978,7695259;-66,9;-53,7;-42,5;-56,7
+c|Nazarbayev Avenue|4326003,7694606;-17,2;-53,7;-42,6;-59,7
+c|Nazarbayev Avenue|4326407,7694555;-15,2;-38,5;-48,6
+c|Nazarbayev Avenue|4325832,7694628;-98,11;-60,7;-12,1
+p|Panfilov street|4324981,7694571;56,-8;60,-8;22,-1;29,-7;35,-5;44,-6;75,-10
+d|Gogol Street|4326003,7694606;5,77;6,84;2,20;6,95;4,56;2,17
+d|Konaev Street|4326232,7694928;40,-4;42,-5;25,-3;52,-8;24,-4;14,-1
+d|Konaev Street|4324495,7695150;35,-5;45,-6;84,-12;13,-1
+d|Shevchenko Street|4324709,7695641;-5,-65;-4,-58;-2,-32;-2,-26;-4,-60;-4,-59
+p||4325956,7695292;-29,2;-5,23;2,31;34,1;-1,-24;-1,-29;0,-4
+c|Abay avenue|4324241,7694834;15,224;2,24
+c|Nazarbayev Avenue|4324241,7694834;-20,3;-29,4
+c|Nazarbayev Avenue|4324256,7694832;-8,1
+c|Dostyk Avenue|4324313,7695692;-15,2
+c|Nazarbayev Avenue|4323923,7694876;-16,2
+c|Dostyk Avenue|4324298,7695694;-19,3;-35,5
+d|Karmysov street|4324559,7695985;18,-3;38,-8;23,-3;28,-1;34,-4;54,-1;36,4;22,5;21,4;36,3;51,3;14,0;42,-8;48,-13;33,-10;15,-8
+d|Karmysov street|4324396,7696058;-15,7;-16,0;-23,-9;-22,-17;-15,-10;-15,-7;-15,-5;-29,1;-24,7;-3,1
+d|Kaldayakov Street|4325072,7695945;66,-19;29,-5;24,-2;35,-4;20,-2;30,-4;26,-4;26,-3;47,-6;21,-3;13,-2
+p|Pushkin Street|4326563,7695279;18,-2;38,-4;22,-2;22,-2;27,-3;16,-2;25,-2;25,-3;18,-1
+d|Bogenbai Batyr Street|4325433,7696238;3,38;9,122;2,25;3,49;5,72;8,125;11,144;6,70;2,36;2,24;3,47;6,98;4,52;2,60;1,15
+c|Kairbekov Street|4325596,7696196;54,-5;14,-2;31,-4;62,-6;17,-1;27,-4;18,-2;53,-7;32,-4;19,-2;15,-2
+d|Kairbekov Street|4325431,7696202;24,-4;30,2;18,2;66,-4;27,-2
+d|Bogenbai Batyr Street|4325433,7696238;-2,-36
+d|Bogenbai Batyr Street|4325310,7694511;-4,-51;-9,-134;-6,-94;-3,-38;-1,-18
+d|Satbayev street|4323935,7695934;-1,-32;-2,-38
+c|Jetisy street|4326526,7696187;42,-6;45,-7;94,-14;95,-13;68,-10;25,-4;83,-12
+d|Gogol Street|4326084,7695804;3,63;4,93;0,12
+d|Kaldayakov Street|4326084,7695804;46,-6
+c|Mukagali Makataev Street|4326495,7695921;10,143;1,21;4,58;3,46
+c|Abay avenue|4324256,7694832;-14,-177;-7,-113;-4,-55;-9,-130;-3,-47
+c|Zheltoksan street|4324207,7694134;-16,-20
+p|Baiseitova Street|4324133,7694504;-24,6;-74,9;-39,5;-24,3;-24,3;-71,9
+c|Zheltoksan street|4323811,7694187;17,1;92,-10;29,-3;43,-7;46,-6;72,-9;62,-9;21,-3
+c|Nazarbayev Avenue|4323871,7694882;-55,6
+c|Nazarbayev Avenue|4323928,7694875;-5,1
+c|Nazarbayev Avenue|4324040,7694861;-28,3
+p|Baiseitova Street|4324246,7694485;65,-10;75,-11;54,-9
+c|Nazarbayev Avenue|4324248,7694833;-7,1
+c|Nazarbayev Avenue|4326177,7694584;-92,12;-39,5;-38,4;-5,1
+d|Kurmangazy street|4324532,7695664;11,101;5,61;2,23;3,35;3,46;2,20;1,35
+c|Mukagali Makataev Street|4326484,7695752;-10,-152;-1,-17
+c|Mukagali Makataev Street|4326440,7695076;-8,-127;-2,-30;-1,-16
+c|Tole Bi Street|4325499,7694672;2,35;3,58;3,38;2,35;5,75;3,37;3,53;1,16
+c|Nazarbayev Avenue|4325499,7694672;-16,2;-66,8;-10,1
+c|Abay avenue|4324207,7694134;-3,-39;-6,-87;-3,-45;-10,-147;-2,-29
+d|Abylay Khan Avenue|4324219,7694310;29,-4;63,-9;31,-4;27,-4;59,-8;7,-1
+c|Abay avenue|4324292,7695615;3,45;3,34
+c|Abay avenue|4324217,7694494;6,81;6,82;5,74;4,63;2,21;1,19
+c|Abay avenue|4324258,7695082;7,98;8,124;4,49;15,262
+c|Abay avenue|4324172,7693836;4,59;10,144;2,29;1,22;2,24
+p|Zhibek Zholy Avenue|4326207,7694560;2,34
+p|Aiteke Bi Street|4325841,7694817;3,40;2,23;6,79
+c|Zheltoksan street|4324191,7694114;-16,2;-103,13;-99,12;-136,17;-11,1
+c|Nazarbayev Avenue|4324137,7694848;-58,8
+c|Nazarbayev Avenue|4324377,7694817;-15,1;-16,3
+d|Shevchenko Street|4324672,7695126;-11,-153;-2,-26;-10,-148;-2,-17
+c|Tole Bi Street|4325596,7696196;3,107;3,25;9,57;5,37;5,66;2,52;5,75;3,50;5,81;3,44;6,109;7,114
+d|Kaldayakov Street|4325744,7695846;76,-10;80,-10;14,-1
+d|Kazybek Bi Street|4325721,7695511;-13,-178;-11,-163;-11,-161;-2,-26;-8,-111;-3,-43;-2,-28;-5,-80;-3,-57;-1,-17
+d|Konaev Street|4325533,7695017;49,-6;16,-2;81,-10;6,-1
+d|Konaev Street|4325844,7694979;22,-3;83,-11;68,-8
+d|Gogol Street|4326028,7694955;5,82;8,114;7,92;2,38;2,19
+d|Shevchenko Street|4324647,7694782;-6,-87
+c|Satbayev street|4323928,7695613;7,106;2,19
+c|Dostyk Avenue|4323937,7695738;-16,2;-119,16
+d|Kaldayakov Street|4325576,7695869;117,-16
+c|Tole Bi Street|4325576,7695869;7,114;2,25;1,21;3,55;2,36;3,47;2,29
+p|Zhibek Zholy Avenue|4326207,7694560;-5,-65;-5,-76;-2,-30;-6,-66;-7,-83;-10,-154;-2,-16
+c|Nazarbayev Avenue|4324079,7694856;-39,5
+p|Baiseitova Street|4324789,7694420;16,-2;18,-2;41,-5;24,-3
+p|Baiseitova Street|4324789,7694402;15,2;83,-8
+p|Baiseitova Street|4324896,7694394;39,-5;13,-2
+p|Baiseitova Street|4324898,7694405;33,-3;18,-2
+d|Kurmangazy street|4324473,7694804;6,19;8,120;1,20;-3,23;0,8
+d|Bogenbai Batyr Street|4325430,7696177;-2,-26;-3,-38;-4,-55;-3,-30;-8,-126;-1,-11
+c|Tole Bi Street|4325564,7695656;2,46;4,55
+p|Karasay Batyr Street|4325101,7694040;2,20;1,20;5,85;1,15
+c|Tole Bi Street|4325485,7694494;4,59;3,39;3,35
+c|Tole Bi Street|4325466,7694239;14,178
+c|Dostyk Avenue|4324355,7695687;-15,2;-15,2;-12,1
+c|Dostyk Avenue|4325555,7695533;-42,5;-26,3
+p|Baiseitova Street|4325285,7694342;-28,3;-20,3;-35,5;-76,11;-52,7;-46,6;-25,3;-25,3;-5,0
+p||4323865,7694163;-38,3;17,14;21,-2;0,-15
+d|Konaev Street|4325685,7694998;43,-5;30,-4;48,-5;24,-3;14,-2
+d|Kabanbay Batyr Street|4324986,7694715;2,23
+p|Karasay Batyr Street|4325176,7695045;-10,-138
+c|Dostyk Avenue|4325555,7695533;43,-6;7,-1
+d|Gogol Street|4326102,7696137;11,153;2,20
+c|Dostyk Avenue|4325047,7695597;-15,2;-48,7;-45,6;-20,2;-34,5;-51,6;-46,6
+d|Kurmangazy street|4324473,7694804;-5,21;2,38;7,101;4,15
+d|Kurmangazy street|4324485,7694994;2,37;2,36;2,25;3,37;1,21;11,173;12,159;1,14
+c|Satbayev street|4323926,7695414;-2,-26;-8,-118;-11,-155;-2,-28;-13,-82
+c|Satbayev street|4323895,7695157;17,236;2,23
+d|Bogenbai Batyr Street|4325409,7695891;-2,-23;-3,-48;-7,-83;-2,-30;-4,-57;-1,-25;-4,-53;-2,-17
+d|Kaldayakov Street|4325409,7695891;14,-2;23,-3;7,-1
+d|Luganskiy Street|4324219,7696026;-57,18;-41,13;-58,21;-14,5;-33,12;-16,6;-24,9;-19,6;-16,6;-32,12;-35,11;-29,5;-15,2;-77,6;-28,7;-31,12;-20,9;-36,17;-27,16;-52,31;-21,13;-17,8;-42,22;-82,54;-15,9;-66,45;-46,28;-19,8;-44,21
+d|Pushkin Street|4326779,7695208;-18,2;-177,23;-24,3;-37,5;-47,7;-25,3
+c|Satbayev street|4323871,7694882;-4,-19;-27,-168;-3,-20;-7,-44;-2,-23;-5,-48;-4,-62;1,-58;0,-49;-1,-39;-1,-48;-3,-64
+c|Nazarbayev Avenue|4324012,7694864;-84,11
+c|Nazarbayev Avenue|4324346,7694821;-40,5;-31,4;-19,2
+c|Nazarbayev Avenue|4324505,7694800;-19,2;-13,2
+c|Nazarbayev Avenue|4324582,7694790;-36,5;-41,5
+c|Nazarbayev Avenue|4324605,7694787;-23,3
+d|Shevchenko Street|4324634,7694607;-10,-153;-2,-18
+d|Kabanbay Batyr Street|4324988,7694738;2,25;2,35;2,29;3,63;2,24;5,58;2,43;4,50;1,19
+c|Nazarbayev Avenue|4324988,7694738;-15,2;-63,8;-93,12
+c|Nazarbayev Avenue|4325059,7694729;-53,7;-18,2
+c|Nazarbayev Avenue|4325098,7694723;-39,6
+c|Nazarbayev Avenue|4325152,7694716;-33,4;-21,3
+c|Nazarbayev Avenue|4325227,7694707;-35,4;-26,3
+c|Nazarbayev Avenue|4325253,7694703;-26,4
+c|Nazarbayev Avenue|4325282,7694699;-29,4
+c|Nazarbayev Avenue|4325323,7694694;-41,5
+c|Nazarbayev Avenue|4325407,7694683;-29,4;-44,6;-11,1
+c|Nazarbayev Avenue|4326465,7694548;-50,7;-8,0
+c|Dostyk Avenue|4324244,7695702;-35,4;-36,4;-19,2;-20,2;-25,3;-22,3;-63,8;-56,6;-31,4
+c|Dostyk Avenue|4324532,7695664;-51,6;-32,5;-33,4;-61,8
+c|Dostyk Avenue|4324584,7695657;-43,5;-9,2
+c|Dostyk Avenue|4324709,7695641;-53,7;-72,9
+c|Dostyk Avenue|4324788,7695631;-31,4;-37,5;-11,1
+d|Kabanbay Batyr Street|4325060,7695784;8,118;2,25;2,18
+c|Dostyk Avenue|4325384,7695555;-37,4;-21,3;-61,8;-50,6
+d|Bogenbai Batyr Street|4325384,7695555;-5,-75;-6,-78;-2,-31;-2,-26;-6,-83;-2,-30;-2,-31;-9,-134;-1,-27
+c|Dostyk Avenue|4325439,7695548;-35,4;-20,3
+c|Dostyk Avenue|4325487,7695541;-48,7
+c|Gogol Street|4325964,7694086;1,23;5,63;3,36;4,51;3,30;4,60;3,29;3,39;2,26;5,75;5,68;1,20
+d|Abylay Khan Avenue|4325795,7694107;78,-10;31,-4
+d|Abylay Khan Avenue|4325639,7694129;156,-22
+d|Abylay Khan Avenue|4325624,7694131;15,-2
+d|Abylay Khan Avenue|4325513,7694146;111,-15
+d|Abylay Khan Avenue|4325459,7694153;24,-2;30,-5
+c|Tole Bi Street|4325459,7694153;7,86
+d|Abylay Khan Avenue|4325287,7694176;14,-2;111,-14;35,-5;12,-2
+d|Abylay Khan Avenue|4325182,7694189;17,-2;77,-10;11,-1
+d|Kabanbay Batyr Street|4324949,7694216;2,23;5,80;1,24;2,26;11,145;3,44;3,30;2,30;2,33;4,47;2,17
+d|Abylay Khan Avenue|4324949,7694216;71,-8;70,-7;28,-3;19,-3;45,-6
+d|Shevchenko Street|4324610,7694256;-2,-22;-6,-85;-3,-50;-2,-30;-2,-31;-2,-29;-4,-52;-1,-20;-2,-27;-11,-149;-1,-24;-4,-52;-8,-131
+d|Abylay Khan Avenue|4324610,7694256;64,-8;23,-3;73,-9;10,-1
+d|Abylay Khan Avenue|4324435,7694280;83,-11;46,-7;35,-4;11,-2
+d|Kurmangazy street|4324435,7694280;3,47;8,117;1,12
+c|Abay avenue|4324204,7694312;10,136;3,46
+d|Kurmangazy street|4324413,7693936;4,66;3,38;3,48;2,38;4,65;5,77;1,12
+d|Satbayev street|4323932,7695864;1,-106;4,-20
+d|Kurmangazy street|4324519,7695496;3,39;1,22;2,24;5,65;2,18
+c|Mukagali Makataev Street|4326429,7694903;-5,-86;-6,-84;-6,-96;-2,-29;-2,-38;-1,-15
+d|Konaev Street|4326028,7694955;71,-10;28,-3;25,-3;63,-9;17,-2
+d|Konaev Street|4325521,7695019;12,-2
+c|Tole Bi Street|4325521,7695019;4,59
+d|Konaev Street|4325349,7695040;81,-10
+d|Bogenbai Batyr Street|4325349,7695040;-5,-63
+d|Konaev Street|4325338,7695041;11,-1
+d|Konaev Street|4325122,7695070;13,-2
+d|Konaev Street|4325011,7695084;63,-8;15,-2;33,-4
+d|Kabanbay Batyr Street|4325011,7695084;3,36;3,35;3,44;4,54;1,22;8,131;1,24
+d|Konaev Street|4324849,7695103;66,-8
+d|Konaev Street|4324684,7695124;26,-3
+d|Konaev Street|4324672,7695126;12,-2
+c|Kairbekov Street|4326102,7696137;35,-3;35,-4;42,-4;44,-5;16,-2;21,-2;23,-3;45,-6;49,-7;11,-2
+d|Kaldayakov Street|4325914,7695825;82,-11;28,-3;25,-3;26,-3;9,-1
+d|Gogol Street|4326074,7695639;5,74;2,30;1,22;1,27;1,12
+c|Mukagali Makataev Street|4326471,7695547;-4,-64;-5,-65;-8,-123;-2,-31;-1,-13
+c|Tole Bi Street|4325561,7695618;3,38
+c|Tole Bi Street|4325555,7695533;1,19
+c|Tole Bi Street|4325556,7695552;5,66
+d|Kaldayakov Street|4326288,7695778;57,-7;34,-5;65,-9;25,-3;15,-2
+d|Pushkin Street|4326254,7695274;21,-2;158,-18;18,-3
+d|Gogol Street|4326052,7695300;6,85;2,40;2,24;10,168;2,22
+d|Bogenbai Batyr Street|4325431,7696202;-1,-25
+d|Abylay Khan Avenue|4324780,7694235;101,-13;59,-5;9,-1
+p|Panfilov street|4326196,7694407;58,-8
+p|Baiseitova Street|4324951,7694387;-3,0
+p|Baiseitova Street|4324973,7694383;-7,1
+d|Kabanbay Batyr Street|4324934,7694040;13,151;2,25
+d|Shevchenko Street|4324622,7694436;-8,-112;-2,-42;-2,-26
+d|Shevchenko Street|4324641,7694695;-6,-76;-1,-12
+d|Kurmangazy street|4324460,7694631;3,49;2,31;6,75;2,18
+d|Kurmangazy street|4324447,7694456;9,124;3,35;1,16
+c|Zheltoksan street|4324207,7694134;17,-3;45,-5;51,-6;23,-3;65,-9;16,-1
+p|Baiseitova Street|4324456,7694457;25,-4;23,-2;27,-4;32,-4;24,-3;22,-3
+d|Bogenbai Batyr Street|4325287,7694176;-9,-132;-2,-31;-1,-16
+d|Bogenbai Batyr Street|4325323,7694694;-11,-154;-1,-14
+d|Karmysov street|4324396,7696058;12,-11;14,-12;13,-11;17,-14;13,-10;25,-5;40,-4;29,-6
+c|Tole Bi Street|4325480,7694417;4,64;1,13
+p|Panfilov street|4325830,7694462;52,-6;23,-3;3,-1
+d|Konaev Street|4326017,7694957;11,-2
+c|Mukagali Makataev Street|4326451,7695251;-1,-20;-1,-23;-8,-122
+d|Kabanbay Batyr Street|4325034,7695430;6,75;6,75;1,17
+c|Nazarbayev Avenue|4326306,7694568;-26,3
+c|Nazarbayev Avenue|4326280,7694571;-103,13
+c|Jetisy street|4326513,7696189;13,-2
+d|Baribayev Street|4326317,7696286;72,-9;35,-5;18,-2;66,-7;9,-1
+c|Mukagali Makataev Street|4326473,7695583;-2,-36
+d|Kurmangazy street|4324481,7694979;4,15
+d|Panfilov street|4326401,7694381;115,-15;34,-4;130,-17;27,-3;26,-3;21,-3;37,-4;38,-5;39,-5;40,-5;44,-5;51,-6;9,-1
+p||4325958,7694150;-20,2;9,136;17,-3;0,-42;-2,-35;-2,-28;-2,-30
+d|Kaldayakov Street|4325693,7695853;40,-5;11,-2
+c|Dostyk Avenue|4325605,7695526;53,-7;56,-7;7,-1
+c|Abay avenue|4324193,7694141;9,129;2,42
+p|Panfilov street|4325324,7694524;51,-6;15,2;85,0
+c|Tole Bi Street|4325459,7694153;0,-23;-10,-131;-1,-23;-2,-20;-11,-130;-2,-36;-7,-103;-2,-29;-2,-28;-2,-23;-6,-105;-2,-29
+c|Mukagali Makataev Street|4326441,7695086;-1,-10
+c|Satbayev street|4323890,7695005;-6,-37;-8,-52;-5,-34
+c|Satbayev street|4323883,7694979;7,26
+c|Abay avenue|4324219,7694310;-10,-143;-2,-33
+c|Tole Bi Street|4325612,7696327;-3,-24;-6,-89;-7,-18
+p|Panfilov street|4325498,7694507;71,-8
+c|Zhangeldin Street|4326678,7695782;-42,4;-61,8;-36,5;-15,2;-23,3;-13,2
+c|Nazarbayev Avenue|4324169,7694844;-32,4
+c|Nazarbayev Avenue|4324192,7694841;-2,0
+c|Tole Bi Street|4325495,7694627;2,28;2,17
+p||4325417,7695085;6,38;-18,9;3,41;-13,-40;-5,-38;19,-2;8,-8
+c|Tole Bi Street|4325525,7695078;7,115;7,100;3,55;4,50;5,76;3,44;1,15
+c|Zheltoksan street|4324424,7694107;58,-8;49,-6;25,-3;30,-4;21,-3;31,-4;26,-4;90,-11;14,-2
+p|Panfilov street|4325736,7694474;71,-10;6,0
+d|Kabanbay Batyr Street|4325058,7695752;2,32
+d|Kabanbay Batyr Street|4325047,7695597;5,68;6,87
+p|Panfilov street|4325574,7694498;63,-7;4,0
+p||4325569,7694499;-15,-9;-51,7;56,12;10,-10
+p||4325576,7694507;65,-23;-8,18;-57,5
+p||4325661,7694484;48,-15;3,27;-34,5;-15,13;-2,-30
+p|Panfilov street|4325657,7694489;54,-12
+p|Panfilov street|4325715,7694477;16,-2
+p|Panfilov street|4325915,7694452;54,-7;8,-1
+d|Shevchenko Street|4324688,7695341;-2,-21;-3,-42;-6,-78;-3,-55;-2,-19
+c|Tole Bi Street|4325570,7695757;5,93;1,19
+d|Kaldayakov Street|4325522,7695876;39,-5;15,-2
+d|Kaldayakov Street|4325495,7695880;27,-4
+p||4325434,7695739;-16,10;8,-17;8,7
+p||4325462,7695782;2,30;-17,12;-3,-24;-2,-28;14,11;6,-1
+d|Kaldayakov street|4325453,7695885;10,-1
+d|Kaldayakov Street|4325463,7695884;32,-4
+p||4325225,7694501;24,-3;1,-27;-12,-17;-16,-4;2,35;1,16
+p|Karasay Batyr Street|4325211,7695510;-4,-46;-3,-42
+c|Dostyk Avenue|4325215,7695576;-37,5;-69,9;-52,6;-10,1
+p||4325841,7694356;2,37;16,-1;-35,18;-1,-31;-1,-23;6,25;1,-23;6,26;2,-27;4,-1
+c|Satbayev street|4323914,7695416;14,197
+c|Satbayev street|4323937,7695738;10,-21;-7,-112;-13,-183;-1,-8
+d|Gogol Street|4326091,7695972;4,64;4,49;2,38;1,14
+c|Kairbekov Street|4325938,7696157;28,-3;68,-8;53,-7;15,-2
+c|Kairbekov Street|4326423,7696099;29,-3;44,-6;10,-2
+d|Bogenbai Batyr Street|4325340,7694930;-4,-54;-2,-29;-3,-43;-6,-83;-2,-27
+d|Bogenbai Batyr Street|4325344,7694977;-4,-47
+d|Konaev Street|4325220,7695057;30,-4;34,-5;54,-7
+c|Mukagali Makataev Street|4326488,7695806;3,53
+c|Mukagali Makataev Street|4326491,7695859;4,62
+d|Kazybek Bi Street|4325744,7695846;-10,-145;-2,-24;-10,-146;-1,-20
+d|Konaev Street|4324719,7695120;42,-6;76,-9;12,-2
+d|Konaev Street|4324710,7695121;9,-1
+p||4323824,7694209;22,143;5,66;-5,21;-15,6;0,-43;0,-41;-1,-24;-1,-32;-2,-37;-3,-59
+p||4323868,7694662;-18,-16;4,76;4,26;4,28;5,30;4,21;5,24;-8,-189
+p||4323831,7694445;15,-6;-10,16;5,68;-6,21;9,21;5,68;16,18;-15,-5;-10,-19;-3,-22;-2,-26;-2,-40;-2,-23;0,-26;0,-22;0,-23
+p||4324157,7694258;-17,2;2,39;17,-2;-2,-39
+p||4324161,7694333;-17,2;18,18;-1,-20
+p||4325872,7695610;9,-82;16,-3;10,82;16,32;5,30;-17,7;3,30;21,-3;25,-3;-12,13;-29,4;-19,2;-20,3;-66,-36;61,24;25,-3;-2,-23;-21,-6;-13,-7;-2,-21;10,-40
+p||4324060,7695986;14,15;9,22;16,-1;15,-5;11,-14;-6,-21;-2,-21;-16,-6;-23,6;-9,20;-9,5
+c|Nazarbayev Avenue|4324190,7694841;-21,3
+c|Zheltoksan street|4324193,7694141;14,-7
+c|Abay avenue|4324191,7694114;2,27
+p||4324918,7694550;-15,-9;25,-15;2,30;3,29;2,30;-24,3;4,-22;3,-46
+p||4324236,7695792;11,-14;-1,-22;-3,-31;-33,-2;22,7;2,30;1,22;1,10
+p||4324534,7695716;-15,-28;15,28
+p||4326560,7695241;-9,17;-80,11;-3,24;29,-2;35,-4;32,0;-2,-30;-2,-16
+p||4324188,7694821;-12,12;12,-12
+c|Nazarbayev Avenue|4323907,7694878;-36,4
+c|Satbayev street|4323890,7695005;-3,42;7,100;1,10
+d|Satbayev street|4323942,7695998;-2,-29;-5,-35
+d|Satbayev street|4323935,7695934;2,29;5,35
+d|Satbayev street|4323957,7696116;-4,-31;-8,-59;-1,-16
+d|Satbayev street|4323944,7696010;-2,-12
+d|Bogenbai Batyr Street|4325311,7694526;-1,-15
+p||4325905,7694444;-17,1;-24,7;-34,-1;1,23;38,-3;19,-2;18,-3;-1,-22
+c|Tole Bi Street|4325298,7691873;13,176;12,160;2,33;10,156;2,20;8,135;1,20;9,122;10,134;5,72;1,21;1,20;13,164;12,160;2,21;1,22;2,27;4,119;5,78;5,75;2,23;1,20;11,167;10,138;2,21;1,22;10,129;6,25
+p||4325582,7695617;-10,-62;10,62
+d|Panfilov street|4326393,7694382;8,-1
+d|Konaev Street|4325135,7695068;34,-5
+d|Konaev Street|4325169,7695063;9,-1
+d|Konaev Street|4325185,7695061;35,-4
+d|Konaev Street|4325178,7695062;7,-1
+d|Kaldayakov Street|4326171,7695793;20,-3
+d|Kaldayakov Street|4326191,7695790;13,-1
+d|Kaldayakov Street|4326136,7695797;35,-4
+d|Kaldayakov Street|4326130,7695798;6,-1
+d|Kaldayakov Street|4326204,7695789;54,-7;16,-2;14,-2
+d|Konaev Street|4325430,7695030;31,-4;20,-2;28,-3;12,-2
+d|Konaev Street|4324937,7695092;62,-6;12,-2
+d|Konaev Street|4324915,7695095;22,-3`;
+
+const MAP_RESI = `e||4326531,7694540;-5,-53;-4,-50;-5,-55;-1,-16
+e||4326111,7695970;-34,3;-83,11;-61,7;-92,9;-52,6;-34,3;-38,5;-28,3;-35,4
+e||4326440,7695076;40,-5;50,-6;69,-8;97,-12;58,-7;50,-6;57,-8;31,-4;46,-6;69,-6;40,-5;13,-1
+e||4326641,7695271;3,52;5,77;3,38;3,51;3,41;7,112;12,130;11,137;10,127;9,124;10,128;12,146;11,128
+e||4326651,7696572;-9,-50;-9,-40;-8,-36;-16,-49;-16,-46;-11,-42;-9,-49
+e||4326462,7695418;43,-6;42,-3;102,-9;57,-6;34,-4;18,-2
+e||4326875,7695881;-45,6;-42,5;-100,17;-43,6;-47,7;-71,10;-31,3
+e||4326817,7694678;-64,8;-41,6;-42,6;-35,5;-63,9;-44,6;-60,9;-41,5;-25,3
+e||4326315,7694760;5,75;4,59;1,8
+e||4326296,7694394;3,52;3,49;3,59;1,14
+e||4324133,7694504;75,-10;9,0
+e||4324381,7696065;-3,40;-5,53;-17,153;-18,151
+e||4324319,7694646;41,-4;47,-5;40,-4;13,-2
+e||4325024,7695253;45,-1;37,-4;75,-9;41,-4;103,-14;35,-5;160,-21;54,-8;38,-5;79,-11;6,-1
+e||4325566,7695702;-50,7;-51,6;-69,8;-11,1
+e||4325832,7694628;3,58;7,83;4,41;1,6
+e||4326285,7694315;-3,-51;-2,-47;-6,-118;-6,-53
+e||4326254,7694399;42,-5;85,-11
+e||4326996,7696247;-92,14;-88,12;-99,15;-135,21
+e||4326473,7695583;-65,9;-80,10;-39,4;-31,6;-38,5;-70,10;-57,9;-19,3
+e||4324519,7695496;82,-11;36,-4;48,-6;12,-2
+e||4323926,7695414;30,-5;55,-10;38,-8;47,-7;73,-13;37,-6;48,-8;23,-4
+e||4323948,7694553;29,-4;59,-8;62,-8;35,-29
+e||4324666,7695970;9,75;12,111
+e||4325166,7694714;-3,-41;-5,-68;-11,36;4,58;1,17
+e||4326243,7695112;-8,-130;-2,-45;-1,-9
+e||4326063,7695467;33,-4;29,-3;77,-10;38,-5;24,-3
+e||4324219,7696026;0,47;-8,49;-5,86;-5,78;-12,143
+e||4324119,7696205;33,9;31,3;23,1
+e||4324788,7696139;1,113
+e||4324936,7696274;-14,65;-32,107;-5,18
+e||4324613,7696811;2,-38;11,-98;13,-118;2,-38;10,-65;10,-94;7,-78;1,-42;-15,-74;2,-4
+e||4324789,7696252;-7,13
+e||4325082,7696084;-25,16;27,7
+e||4324697,7695473;76,-10;46,-5;46,-6;29,-4;47,-6;36,-5;44,-5;13,-2
+e||4325445,7696398;-32,-2;-45,-20;-70,-41;-26,-13;-46,-13;-30,-7;-42,-9;-53,-7;-49,-6;-63,-3;-53,-3;-45,-2;-29,-1;-30,-2;-50,-4
+e||4325090,7696203;-62,-4;-42,-4;-36,-1;-40,-1
+e||4324201,7696286;-51,-6;-49,-10;-77,-15;-41,-1;-16,-4
+e||4324997,7696475;-1,-71;-1,-45;-3,-52;-3,-30
+e||4324160,7696215;-42,-41;-35,8;36,23
+e||4323976,7696110;-8,123;-4,39;-6,45;-6,59;6,8
+e||4325082,7696077;54,14;34,16;46,15;43,14;28,17;27,18;51,30;68,37;77,31;58,22
+e||4325821,7694463;3,42;3,52;4,60;1,11
+e||4324709,7695641;-1,70;5,82;5,19
+e||4324327,7695520;28,-3;37,-5;86,-11;28,-4;13,-1
+e||4326288,7695778;-2,-38;-8,-114;-1,-17
+e||4326292,7695853;4,75;1,17
+e||4325803,7695670;-58,5;-13,2
+e||4325982,7694258;58,-9;37,-5;104,-16
+e||4324789,7696252;-51,-3;-6,36;-10,3
+e||4324656,7696162;31,-6;48,-8;53,-9;97,-15;41,-6;83,-10;48,-8
+e||4324782,7696265;-17,95;-9,66;-7,58;0,3
+e||4325326,7696178;-22,73;-11,36;-12,39;-14,61
+e||4324723,7695811;6,84;2,35
+e||4324926,7695729;3,54
+e||4324926,7695729;27,-3;42,-5;20,-26
+e||4325053,7695680;-31,-12;-36,5;-37,5;0,48
+e||4325016,7695718;4,48;0,6
+e||4324675,7696045;31,-7;41,-3;31,-3
+e||4325216,7696122;-13,68;-4,40
+e||4326412,7696101;3,53;8,104;1,14
+e||4326495,7695921;-41,5;-57,7;-60,7;-30,4;-10,1
+e||4324719,7695811;0,-74;-3,-82;-7,-14
+e||4325795,7694107;-6,-95;-5,-65;-1,-13
+e||4325795,7694107;7,107;4,56;6,82;7,85;2,26
+e||4326340,7695088;10,132
+e||4325226,7695746;11,155;1,13
+e||4325191,7695238;-11,-155;-2,-21
+e||4325662,7694647;-4,-76;-5,-82;-1,-14
+e||4326149,7694413;-49,6;-55,6;-42,4;-6,0
+e||4326015,7694775;-61,7;-102,12;-64,7;-35,4;-66,8;-134,18;-28,4;-66,9;-110,14;-52,6;-76,8;-41,5;1,18
+e||4325181,7694895;146,-21;80,-10;60,-8;32,-4;27,-4;115,-15;32,-4;33,-4;83,-9;46,-5;36,-4;64,-8;64,-8;17,-4
+e||4325048,7695770;-28,2;-68,8;-49,7;-63,8;-31,4;-55,8;-31,4;-123,17;-38,6;-33,4;-27,3;-45,5;-46,6;-30,3;-14,-8
+e||4325034,7695430;33,-4;40,-5;66,-9;31,-4;74,-9;58,-7;36,-5;35,-4;27,-4;45,-6;50,-6;15,-2
+e||4324826,7694924;-7,-86
+e||4325155,7694900;-81,-5;-62,7;-39,4;-87,11;-40,5;-174,23;-50,7;-69,9;-35,5;-31,4;-31,3;-55,7;-49,4;2,17
+e||4324354,7695001;38,-4;81,-9;28,-3;125,-17;34,-5;159,-19;46,-5;102,-14;33,-5;102,-13;50,-6;3,-1
+e||4324865,7695452;-4,-49;-5,-78;-3,-39;-6,-65;-7,-87;-4,-43;-3,-46;-5,-94;-1,-8
+e||4326754,7694861;-105,13;-31,4;-55,7;-51,7;-71,9;-12,2
+e||4324817,7694760;-3,-43;-4,-45;-5,-76
+e||4325938,7696157;5,86;4,73;8,129;-1,22
+e||4326277,7695609;-7,-89;-5,-65;-7,-115;-3,-48;-1,-18
+e||4324780,7694235;5,72;3,62;0,39
+e||4324788,7694408;-75,15;-76,12;-15,1
+e||4326299,7694352;0,-7
+e||4326300,7694368;-1,-16
+e||4326287,7694346;12,-1
+e||4326302,7694393;-2,-25
+e||4325485,7694494;61,-8;38,2;56,-8;27,-9;45,-4;93,-19;33,-1;50,-6;37,-5;51,-10;15,4
+e||4324818,7694819;4,-42;-5,-17
+e||4326585,7695669;78,-11;3,-4
+e||4324457,7696059;24,-3
+e||4324481,7696056;51,-9;16,28
+e||4324548,7696075;4,59;-25,35;-50,28;-15,-47;-9,-44;-6,-38;10,-9
+e||4324440,7696020;17,39
+e||4324973,7694558;35,-5;57,-7;30,-7;38,-5;95,-12;64,-9;8,-1
+e||4325300,7694512;10,-1
+e||4324780,7694235;-10,-150;-2,-23
+e||4324460,7694631;38,-5;29,-4;38,-5;57,-8;12,-2
+e||4325310,7694511;68,-6;79,-4;28,-7
+e||4325257,7696044;-6,-51;-4,-74;-1,-6
+e||4324506,7695323;-73,7;-67,8;92,1;37,-4;12,-1
+e||4323945,7694508;-67,-77;-3,-2
+e||4323889,7694652;53,-91;6,-8
+e||4324133,7694504;-98,-7;-61,8;-29,3
+e||4327165,7696009;-35,-12;-44,-16;-45,1;-71,10;-86,15;-86,12;-100,17;-182,26;-11,2
+e||4326327,7694929;4,52;8,94
+e||4325977,7694259;5,-1
+e||4325997,7694429;-6,1
+e||4326254,7695274;-11,-162
+e||4326042,7695167;30,16;39,-7;1,-51;58,-15;61,-7
+e||4326347,7696626;-12,-36;-5,-104;-3,-53;-9,-137;-1,-10
+e||4326325,7694902;2,27
+e||4326339,7695075;1,13
+e||4326381,7694383;12,-1
+e||4326306,7696099;8,144;3,43
+e||4326298,7695962;8,137
+e||4326574,7695541;37,-5;47,-6;91,-14
+e||4326250,7695100;52,-7;38,-5;38,-5;46,-5;16,-2
+e||4326231,7695103;19,-3
+e||4325654,7696021;-55,7;-64,3;-44,5;-31,4;-31,3;-98,3;-67,2;-7,-4
+e||4326516,7694366;-5,-77;-5,-55;-4,-58;-10,-134;-1,-22
+e||4324288,7694650;31,-4
+e||4324817,7694760;1,59
+e||4325385,7695724;-36,5;-36,5;-48,7;-39,5;-52,7;-60,9;-41,5;-14,2
+e||4325059,7695769;-11,1
+e||4326297,7695945;1,17
+e||4326297,7695945;-34,4;-46,7;-35,4;-27,4;-44,6
+e||4324819,7694838;-1,-19
+e||4326314,7694745;1,15
+e||4326402,7694735;-54,6;-30,4;-31,3;-46,3;-3,1
+e||4323945,7694508;-3,37;6,8
+e||4326288,7695778;4,75`;
+
+const MAP_AREAS = `g|North square|4325793,7694129;-142,8;22,328;36,-5;15,-1;87,-14;-7,-143;-2,-31;-9,-142
+g|Шоқан Уәлиханов саябағы|4324745,7695261;3,51;-14,16;-31,4;-2,-27;-1,-23;26,-19;19,-2
+g||4326584,7694073;-29,4;13,23;2,27;3,31;3,55;-58,7;-12,-177;75,-11;3,41
+g||4326635,7694123;4,78;56,-6;-2,-41;-1,-41;-24,4;-33,6
+g|Park of the 28 Guardsmen|4326014,7694968;3,38;17,261;8,120;5,72;11,159;-108,18;-27,3;-15,2;-17,2;-16,2;-25,3;-29,4;-83,10;-9,-142;-10,-139;-25,-373;320,-40
+g||4326123,7694960;-23,3;-18,2;-30,4;-17,3;4,62;45,-7;43,-8;-3,-34;-1,-25
+g||4324623,7696216;-84,9;-11,-27;35,-39;45,8;16,22;-1,27
+g||4324715,7695524;-4,94;75,5;-2,-32;-11,16;-21,3;-31,-10;-2,-18;17,-3;6,-21;-24,9;-3,-43
+g|Kok Tobe Park|4324375,7695861;169,-19;6,108;-23,12;-74,6;-7,34;-53,44;-6,-81;-9,-47;-3,-57
+g||4325557,7695607;5,88;-65,10;39,-19;-4,-55;-4,-16;29,-8
+g||4325344,7695119;-32,10;-11,-51;-14,2;52,-24;5,63
+w||4324578,7695958;52,-11;36,0;16,1;30,0;17,-2;22,-2;18,1;17,5;33,5;17,5;18,0;16,1;17,2;17,2;17,2;17,-2;18,-2;17,-6;16,-4;17,-4;16,-5;17,-5;14,-3;-13,12;-17,4;-17,4;-17,5;-16,4;-17,5;-17,2;-18,2;-17,-1;-17,-3;-17,0;-17,-2;-17,-2;-17,-2;-33,-7;-18,-3;-17,-1;-17,1;-22,2;-30,1;-16,-1;-36,0;-52,2
+g||4325207,7695233;-16,2;-11,-152;17,4;8,118;14,25;-12,3
+g||4325284,7695084;-2,-22;-56,7;1,27;49,-8;3,30;-23,3;4,59;60,-7;-30,-12;-6,-77
+g||4323843,7695472;9,117;-17,2;-23,4;-3,-32;-13,9;-1,42;7,88;9,26;22,3;-10,-14;-9,-15;-7,-79;10,-12;44,-9;11,10;6,-21;-10,-19;6,-48;-13,-27;5,-57;-18,-31;-13,-5;-7,-120;15,-2;-1,-28;-45,4;-1,-20;-15,2;4,18;-12,9;11,14;14,10;9,20;17,121;-1,19;-9,19;-11,9;-15,5;-16,-3;-12,-12;-6,-16;-5,-34;0,37;24,42;27,-12;43,-14
+g||4324443,7694300;158,-33;24,338;-24,4;-22,3;-103,11;-11,-14;-10,-145;-12,-164
+g|Астана алаңындағы саябақ|4325294,7694196;11,-11;139,-18;32,312;-76,20;-11,7;-14,-7;-49,6;-18,-133;-2,-24;-3,-31;-9,-121
+g|D. Kunayev park|4325268,7694890;17,-2;35,-5;3,39;2,25;1,22;4,55;-37,4;-16,1;-9,-139
+g||4324283,7695679;-314,38;315,-27;-1,-11
+g||4324740,7694995;55,-7;2,29;30,-4;2,25;-8,-13;-49,7;-4,24;62,-8;1,19;-65,8;-22,-9;6,-25;-22,-2;-7,20;16,-1;-28,12;-4,-70;28,-4;2,34;20,-3;-1,-19;-13,1;-1,-14
+g||4324874,7695015;-2,-35;45,-6;-1,-26;16,-4;3,46;18,-2;-2,-39;16,-1;6,91;-36,4;-2,-37;-61,9
+g||4326562,7695257;205,-39;1,33;-29,3;-2,-20;-13,-2;-12,6;-29,4;-12,-4;-46,10;-16,-1;-47,10`;
+
+/* ============================================================
+   Street map engine.
+   Geometry is real OpenStreetMap data for central Almaty, pulled
+   once and baked in below, so the map needs no network at all —
+   which is the point when you're abroad on roaming.
+   Rendered to canvas in a Google-Maps-like style.
+   ============================================================ */
+
+const MAP_BBOX = {la0:43.2385, la1:43.2665, lo0:76.9410, lo1:76.9630};
+const MPD_LAT = 111130, MPD_LON = 81070;   // metres per degree at this latitude
+
+let MAPGEO = null;          // parsed geometry, built on first use
+let mapView = null;         // {cx, cy, ppm} centre in world metres + pixels/metre
+let mapCanvas = null, mapCtx = null, mapWrap = null, mapPinLayer = null;
+let mapDrag = null, mapPinch = null, mapRaf = 0, mapSel = 0;
+
+function parseGeo(src, closed){
+  const out = [];
+  const lines = src.split("\n");
+  for(const ln of lines){
+    if(!ln) continue;
+    const i1 = ln.indexOf("|"), i2 = ln.indexOf("|", i1 + 1);
+    if(i1 < 0 || i2 < 0) continue;
+    const cls = ln.slice(0, i1), name = ln.slice(i1 + 1, i2);
+    const chunks = ln.slice(i2 + 1).split(";");
+    let la = 0, lo = 0;
+    const pts = [];
+    for(let k = 0; k < chunks.length; k++){
+      const c = chunks[k].split(",");
+      const a = +c[0], b = +c[1];
+      if(k === 0){ la = a; lo = b; } else { la += a; lo += b; }
+      pts.push([la / 1e5, lo / 1e5]);
+    }
+    if(pts.length < 2) continue;
+    out.push({cls, name, pts, closed: !!closed});
+  }
+  return out;
+}
+
+function buildGeo(){
+  if(MAPGEO) return MAPGEO;
+  const roads = parseGeo(MAP_ROADS, false).concat(parseGeo(MAP_RESI, false));
+  const areas = parseGeo(MAP_AREAS, true);
+  /* world-metre coordinates, y increasing downward (screen sense) */
+  const conv = f => f.forEach(o => {
+    o.w = o.pts.map(p => [p[1] * MPD_LON, -p[0] * MPD_LAT]);
+  });
+  conv(roads); conv(areas);
+  /* label anchor: midpoint of each way's longest segment, plus its angle */
+  roads.forEach(o => {
+    if(!o.name){ return; }
+    let best = -1, bi = 0;
+    for(let i = 0; i < o.w.length - 1; i++){
+      const dx = o.w[i+1][0] - o.w[i][0], dy = o.w[i+1][1] - o.w[i][1];
+      const d = dx*dx + dy*dy;
+      if(d > best){ best = d; bi = i; }
+    }
+    const a = o.w[bi], b = o.w[bi+1];
+    let total = 0;
+    for(let i = 0; i < o.w.length - 1; i++){
+      total += Math.hypot(o.w[i+1][0]-o.w[i][0], o.w[i+1][1]-o.w[i][1]);
+    }
+    /* anchor at the way's middle by distance, angled along its overall run,
+       which reads correctly for Almaty's straight grid streets */
+    let run = 0, ax = o.w[0][0], ay = o.w[0][1];
+    for(let i = 0; i < o.w.length - 1; i++){
+      const seg = Math.hypot(o.w[i+1][0]-o.w[i][0], o.w[i+1][1]-o.w[i][1]);
+      if(run + seg >= total/2){
+        const f = seg ? (total/2 - run) / seg : 0;
+        ax = o.w[i][0] + (o.w[i+1][0]-o.w[i][0]) * f;
+        ay = o.w[i][1] + (o.w[i+1][1]-o.w[i][1]) * f;
+        break;
+      }
+      run += seg;
+    }
+    const f0 = o.w[0], f1 = o.w[o.w.length-1];
+    o.lab = {x:ax, y:ay, ang:Math.atan2(f1[1]-f0[1], f1[0]-f0[0]),
+             len:Math.max(Math.sqrt(best), total * 0.92)};
+  });
+  const order = {e:0, p:1, d:2, c:3, b:4, a:5};
+  roads.sort((x, y) => (order[x.cls]||0) - (order[y.cls]||0));
+  MAPGEO = {roads, areas};
+  return MAPGEO;
+}
+
+/* --- palette, read from the page's own tokens so both themes work --- */
+function mapPalette(){
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const t = document.documentElement.getAttribute("data-theme");
+  const isDark = t === "dark" || (dark && t !== "light");
+  return isDark ? {
+    land:"#131C17", park:"#1C2E22", water:"#15303F",
+    casing:"#0C1410", minor:"#28342C", mid:"#313D33", major:"#3E4738",
+    path:"#242F27", label:"#8CA096", halo:"#131C17",
+    route:"#DBAE5B", routeHalo:"#0C1410", pin:"#7FBF9A", pinInk:"#0D1411", pinRing:"#131C17"
+  } : {
+    land:"#EAE6DA", park:"#C6DFBA", water:"#A2CFE6",
+    casing:"#D5CDB8", minor:"#FFFFFF", mid:"#FFFFFF", major:"#FBE4AC",
+    path:"#E3DBC8", label:"#6B7B70", halo:"#FBFAF5",
+    route:"#A9761F", routeHalo:"#FFFDF7", pin:"#1D4536", pinInk:"#F6F4EC", pinRing:"#FFFDF7"
+  };
+}
+
+const ROAD_W = { a:[13,9], b:[11,7.5], c:[8.5,5.5], d:[6.5,4], e:[4.5,2.6], p:[3.2,2] };
+
+function mapDraw(){
+  if(!mapCtx || !mapView) return;
+  const g = buildGeo(), P = mapPalette();
+  const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+  const cw = mapWrap.clientWidth, ch = mapWrap.clientHeight;
+  if(mapCanvas.width !== Math.round(cw*dpr) || mapCanvas.height !== Math.round(ch*dpr)){
+    mapCanvas.width = Math.round(cw*dpr); mapCanvas.height = Math.round(ch*dpr);
+    mapCanvas.style.width = cw + "px"; mapCanvas.style.height = ch + "px";
+  }
+  const ctx = mapCtx;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.fillStyle = P.land; ctx.fillRect(0, 0, cw, ch);
+
+  const z = mapView.ppm;
+  const sx = x => (x - mapView.cx) * z + cw/2;
+  const sy = y => (y - mapView.cy) * z + ch/2;
+  const pad = 60;
+  const vis = (x, y) => x > -pad && x < cw+pad && y > -pad && y < ch+pad;
+
+  /* areas */
+  ctx.lineJoin = "round";
+  for(const o of g.areas){
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const xs = [], ys = [];
+    for(let i = 0; i < o.w.length; i++){
+      const x = sx(o.w[i][0]), y = sy(o.w[i][1]);
+      xs.push(x); ys.push(y);
+      if(x < x0) x0 = x; if(x > x1) x1 = x;
+      if(y < y0) y0 = y; if(y > y1) y1 = y;
+    }
+    if(x1 < -pad || x0 > cw + pad || y1 < -pad || y0 > ch + pad) continue;
+    ctx.beginPath();
+    for(let i = 0; i < xs.length; i++) i ? ctx.lineTo(xs[i], ys[i]) : ctx.moveTo(xs[i], ys[i]);
+    ctx.closePath();
+    ctx.fillStyle = o.cls === "w" ? P.water : P.park;
+    ctx.fill();
+  }
+
+  /* Roads: casing pass then fill pass, narrowest class first so the big
+     roads sit on top. Ways are batched per class and each way is tested by
+     its screen bounding box, so a way that is off-screen is skipped without
+     disturbing the batch it belongs to. */
+  const onScreen = o => {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for(let i = 0; i < o.w.length; i++){
+      const x = sx(o.w[i][0]), y = sy(o.w[i][1]);
+      if(x < x0) x0 = x; if(x > x1) x1 = x;
+      if(y < y0) y0 = y; if(y > y1) y1 = y;
+    }
+    return x1 > -pad && x0 < cw + pad && y1 > -pad && y0 < ch + pad;
+  };
+  const byClass = {};
+  for(const o of g.roads){ (byClass[o.cls] || (byClass[o.cls] = [])).push(o); }
+  const classOrder = ["e", "p", "d", "c", "b", "a"];
+  for(let pass = 0; pass < 2; pass++){
+    for(const cls of classOrder){
+      const arr = byClass[cls];
+      if(!arr) continue;
+      const wspec = ROAD_W[cls] || ROAD_W.e;
+      const lw = Math.max(pass ? 0.8 : 1.4, wspec[pass] * Math.min(1.6, Math.max(0.42, z / 0.22)));
+      const col = pass
+        ? (cls === "a" || cls === "b" ? P.major : (cls === "p" ? P.path : P.minor))
+        : P.casing;
+      ctx.beginPath();
+      ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      let drew = false;
+      for(const o of arr){
+        if(!onScreen(o)) continue;
+        ctx.moveTo(sx(o.w[0][0]), sy(o.w[0][1]));
+        for(let i = 1; i < o.w.length; i++) ctx.lineTo(sx(o.w[i][0]), sy(o.w[i][1]));
+        drew = true;
+      }
+      if(drew) ctx.stroke();
+    }
+  }
+
+  /* the route */
+  const holes = setup.holes.filter(h => h.lat != null && h.lon != null);
+  if(holes.length > 1){
+    const path = () => {
+      ctx.beginPath();
+      holes.forEach((h, i) => {
+        const x = sx(h.lon * MPD_LON), y = sy(-h.lat * MPD_LAT);
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+    };
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    path(); ctx.strokeStyle = P.routeHalo; ctx.lineWidth = 7; ctx.setLineDash([]); ctx.stroke();
+    path(); ctx.strokeStyle = P.route; ctx.lineWidth = 3.4; ctx.setLineDash([9, 6]); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  /* street names, biggest roads first, with a simple collision grid */
+  if(z > 0.10){
+    const taken = [];
+    const hit = (x, y, w) => {
+      for(const r of taken) if(Math.abs(r.x-x) < (r.w+w)/2 + 6 && Math.abs(r.y-y) < 13) return true;
+      return false;
+    };
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const named = g.roads.filter(o => o.lab && o.lab.len * z > 46)
+      .sort((a,b) => (ROAD_W[b.cls]||ROAD_W.e)[0] - (ROAD_W[a.cls]||ROAD_W.e)[0] || b.lab.len - a.lab.len);
+    const placed = {};
+    for(const o of named){
+      const x = sx(o.lab.x), y = sy(o.lab.y);
+      const short = o.name.replace(/ (Street|street|Avenue|avenue)$/, "");
+      /* one label per street unless the two are far apart on screen */
+      const prev = placed[short];
+      if(prev && Math.hypot(prev.x - x, prev.y - y) < 230) continue;
+      const fs = (ROAD_W[o.cls]||ROAD_W.e)[0] > 8 ? 11.5 : 10.5;
+      ctx.font = "600 " + fs + "px 'Archivo Narrow', 'Archivo', sans-serif";
+      const w = ctx.measureText(short).width;
+      if(w > 160 || w > o.lab.len * z - 6) continue;
+      /* a rotated label needs its clearance on the axis it actually runs along */
+      let ang = o.lab.ang;
+      if(ang > Math.PI/2) ang -= Math.PI;
+      if(ang < -Math.PI/2) ang += Math.PI;
+      const vert = Math.abs(ang) > Math.PI/4;
+      const mx = (vert ? 12 : w/2) + 6, my = (vert ? w/2 : 10) + 6;
+      if(x < mx || x > cw - mx || y < my || y > ch - my) continue;
+      if(hit(x, y, w)) continue;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+      ctx.lineWidth = 3; ctx.strokeStyle = P.halo; ctx.lineJoin = "round";
+      ctx.strokeText(short, 0, 0);
+      ctx.fillStyle = P.label; ctx.fillText(short, 0, 0);
+      ctx.restore();
+      taken.push({x, y, w});
+      placed[short] = {x, y};
+    }
+  }
+
+  /* park names */
+  if(z > 0.16){
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "600 11px 'Archivo Narrow','Archivo',sans-serif";
+    for(const o of g.areas){
+      if(!o.name || o.cls === "w") continue;
+      let mx = 0, my = 0;
+      o.w.forEach(p => { mx += p[0]; my += p[1]; });
+      const x = sx(mx/o.w.length), y = sy(my/o.w.length);
+      if(x < 40 || x > cw-40 || y < 20 || y > ch-20) continue;
+      if(!/park|саяба|алаң|square/i.test(o.name)) continue;
+      ctx.lineWidth = 3; ctx.strokeStyle = P.halo; ctx.strokeText(o.name, x, y);
+      ctx.fillStyle = P.label; ctx.fillText(o.name, x, y);
+    }
+  }
+
+  mapPins();
+  mapScale();
+}
+
+function mapPins(){
+  if(!mapPinLayer) return;
+  const cw = mapWrap.clientWidth, ch = mapWrap.clientHeight, z = mapView.ppm;
+  const frag = [];
+  setup.holes.forEach((h, i) => {
+    if(h.lat == null || h.lon == null) return;
+    const x = (h.lon * MPD_LON - mapView.cx) * z + cw/2;
+    const y = (-h.lat * MPD_LAT - mapView.cy) * z + ch/2;
+    if(x < -40 || x > cw+40 || y < -50 || y > ch+40) return;
+    const sel = mapSel === i + 1;
+    frag.push('<button type="button" class="mpin'+(sel?" sel":"")+(h.ok?"":" ap")
+      + '" data-pin="'+(i+1)+'" style="left:'+x.toFixed(1)+'px; top:'+y.toFixed(1)+'px" '
+      + 'aria-label="Hole '+(i+1)+', '+esc(h.venue||"pub "+(i+1))+'">'+(i+1)+'</button>');
+  });
+  mapPinLayer.innerHTML = frag.join("");
+}
+
+function mapScale(){
+  const el = document.getElementById("mapScale");
+  if(!el) return;
+  const want = mapWrap.clientWidth * 0.28 / mapView.ppm;      // metres for ~28% of width
+  const steps = [50, 100, 200, 300, 500, 1000, 2000];
+  let m = steps[0];
+  for(const s of steps) if(s <= want) m = s;
+  el.style.width = (m * mapView.ppm).toFixed(1) + "px";
+  el.dataset.label = m >= 1000 ? (m/1000) + " km" : m + " m";
+  el.textContent = el.dataset.label;
+}
+
+function mapSchedule(){
+  if(mapRaf) return;
+  mapRaf = requestAnimationFrame(() => { mapRaf = 0; mapDraw(); });
+}
+
+function mapFit(){
+  const holes = setup.holes.filter(h => h.lat != null && h.lon != null);
+  const el = mapWrap || document.getElementById("mapWrap");
+  const cw = (el && el.clientWidth) || 340, ch = (el && el.clientHeight) || 380;
+  if(!holes.length){
+    mapView = {cx:((MAP_BBOX.lo0+MAP_BBOX.lo1)/2)*MPD_LON, cy:-((MAP_BBOX.la0+MAP_BBOX.la1)/2)*MPD_LAT, ppm:0.18};
+    return;
+  }
+  const xs = holes.map(h => h.lon * MPD_LON), ys = holes.map(h => -h.lat * MPD_LAT);
+  const x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+  const y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+  const padPx = 46;
+  const ppm = Math.min((cw - 2*padPx) / Math.max(120, x1 - x0), (ch - 2*padPx) / Math.max(120, y1 - y0));
+  mapView = {cx:(x0+x1)/2, cy:(y0+y1)/2, ppm:Math.max(0.045, Math.min(1.4, ppm))};
+}
+
+function mapZoom(factor, ax, ay){
+  const cw = mapWrap.clientWidth, ch = mapWrap.clientHeight;
+  const z0 = mapView.ppm;
+  const z1 = Math.max(0.045, Math.min(1.4, z0 * factor));
+  if(z1 === z0) return;
+  if(ax == null){ ax = cw/2; ay = ch/2; }
+  /* keep the point under the cursor/fingers fixed */
+  const wx = (ax - cw/2) / z0 + mapView.cx, wy = (ay - ch/2) / z0 + mapView.cy;
+  mapView.ppm = z1;
+  mapView.cx = wx - (ax - cw/2) / z1;
+  mapView.cy = wy - (ay - ch/2) / z1;
+  mapSchedule();
+}
+
+function mapInit(){
+  mapWrap = document.getElementById("mapWrap");
+  if(!mapWrap || mapCanvas) return;
+  mapCanvas = document.getElementById("mapCanvas");
+  mapCtx = mapCanvas.getContext("2d");
+  mapPinLayer = document.getElementById("mapPins");
+  mapFit();
+
+  const pt = e => {
+    const r = mapWrap.getBoundingClientRect();
+    const t = e.touches && e.touches.length ? e.touches[0] : e;
+    return {x:t.clientX - r.left, y:t.clientY - r.top};
+  };
+  const down = e => {
+    if(e.touches && e.touches.length === 2){
+      const r = mapWrap.getBoundingClientRect();
+      const a = e.touches[0], b = e.touches[1];
+      mapPinch = {d:Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY),
+                  x:(a.clientX+b.clientX)/2 - r.left, y:(a.clientY+b.clientY)/2 - r.top};
+      mapDrag = null; return;
+    }
+    const p = pt(e);
+    mapDrag = {x:p.x, y:p.y, cx:mapView.cx, cy:mapView.cy, moved:0};
+  };
+  const move = e => {
+    if(mapPinch && e.touches && e.touches.length === 2){
+      const a = e.touches[0], b = e.touches[1];
+      const d = Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+      if(mapPinch.d > 8){ mapZoom(d / mapPinch.d, mapPinch.x, mapPinch.y); }
+      mapPinch.d = d;
+      e.preventDefault(); return;
+    }
+    if(!mapDrag) return;
+    const p = pt(e);
+    const dx = p.x - mapDrag.x, dy = p.y - mapDrag.y;
+    mapDrag.moved = Math.max(mapDrag.moved, Math.abs(dx) + Math.abs(dy));
+    mapView.cx = mapDrag.cx - dx / mapView.ppm;
+    mapView.cy = mapDrag.cy - dy / mapView.ppm;
+    mapSchedule();
+    if(e.cancelable) e.preventDefault();
+  };
+  const up = () => { mapDrag = null; mapPinch = null; };
+
+  mapWrap.addEventListener("mousedown", down);
+  window.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", up);
+  mapWrap.addEventListener("touchstart", down, {passive:true});
+  mapWrap.addEventListener("touchmove", move, {passive:false});
+  mapWrap.addEventListener("touchend", up);
+  mapWrap.addEventListener("wheel", e => {
+    const p = pt(e);
+    mapZoom(e.deltaY < 0 ? 1.18 : 1/1.18, p.x, p.y);
+    e.preventDefault();
+  }, {passive:false});
+
+  mapPinLayer.addEventListener("click", e => {
+    const b = e.target.closest("[data-pin]"); if(!b) return;
+    mapSel = mapSel === +b.dataset.pin ? 0 : +b.dataset.pin;
+    mapCallout(); mapPins();
+  });
+
+  document.getElementById("mapIn").addEventListener("click", () => mapZoom(1.5));
+  document.getElementById("mapOut").addEventListener("click", () => mapZoom(1/1.5));
+  document.getElementById("mapReset").addEventListener("click", () => { mapFit(); mapSel = 0; mapCallout(); mapSchedule(); });
+  document.getElementById("mapHere").addEventListener("click", () => { mapSel = hole; mapCentreOn(hole); mapCallout(); });
+
+  addEventListener("resize", mapSchedule);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", mapSchedule);
+}
+
+function mapCentreOn(n){
+  const h = setup.holes[n-1];
+  if(!h || h.lat == null) return;
+  mapView.cx = h.lon * MPD_LON; mapView.cy = -h.lat * MPD_LAT;
+  mapView.ppm = Math.max(mapView.ppm, 0.45);
+  mapSchedule();
+}
+
+function mapCallout(){
+  const el = document.getElementById("mapCallout");
+  if(!el) return;
+  const h = mapSel ? setup.holes[mapSel-1] : null;
+  if(!h){ el.hidden = true; return; }
+  const addr = (h.note || "").split("·")[0].trim();
+  el.hidden = false;
+  el.innerHTML = '<div class="co-h"><span class="co-n">'+mapSel+'</span>'
+    + '<div><b>'+esc(h.venue || ("Pub " + mapSel))+'</b>'
+    + (h.lat != null && !h.ok ? '<span class="approx">approx</span>' : '')
+    + '<span class="a">'+(addr ? esc(addr)+" · " : "")+esc(h.drink||"no drink set")+' · par '+h.par+'</span></div>'
+    + '<button type="button" class="co-x" id="coClose" aria-label="Close">&times;</button></div>'
+    + '<div class="maplinks"><a href="'+esc(mapsLink(h))+'" target="_blank" rel="noopener noreferrer">Google Maps</a>'
+    + '<a href="'+esc(gisLink(h))+'" target="_blank" rel="noopener noreferrer">2GIS</a>'
+    + '<button type="button" class="co-play" id="coPlay">Score this hole</button></div>';
+  document.getElementById("coClose").onclick = () => { mapSel = 0; mapCallout(); mapPins(); };
+  document.getElementById("coPlay").onclick = () => { hole = mapSel; showTab("play"); render(); };
+}
+
+function renderMap(){
+  const holes = setup.holes;
+  const placed = holes.map((h,i) => ({h, n:i+1})).filter(o => o.h.lat != null && o.h.lon != null);
+
+  /* --- intro line --- */
+  let total = 0;
+  for(let i = 1; i < holes.length; i++){
+    const a = holes[i-1], b = holes[i];
+    if(a.lat != null && b.lat != null) total += metres(a, b);
+  }
+  document.getElementById("mapIntro").textContent = placed.length >= 2
+    ? holes.length + " holes · " + distText(total) + " of walking · about "
+      + Math.round(total/80) + " minutes on your feet, spread over the night"
+    : "Add addresses to your holes in Setup and they'll appear here with map links.";
+
+  /* --- the map --- */
+  if(document.getElementById("mapWrap")){
+    if(!mapView) mapFit();
+    if(!document.getElementById("view-map").hidden) mapSchedule();
+  }
+
+  /* --- legend --- */
+  document.getElementById("mapLegend").innerHTML = holes.map((h,i) => {
+    const prev = i > 0 ? holes[i-1] : null;
+    const d = (prev && prev.lat != null && h.lat != null) ? distText(metres(prev, h)) : "";
+    const addr = (h.note || "").split("·")[0].trim();
+    return '<div class="leg"><div class="n">'+(i+1)+'</div>'
+      + '<div><span class="v">'+(h.venue ? esc(h.venue) : "Pub "+(i+1))+'</span>'
+      + (h.lat != null && !h.ok ? '<span class="approx">approx</span>' : '')
+      + '<span class="a">'+(addr ? esc(addr)+" · " : "")+esc(h.drink||"no drink set")
+      + ' · par '+h.par+'</span>'
+      + '<div class="maplinks"><a href="'+esc(mapsLink(h))+'" target="_blank" rel="noopener noreferrer">Google Maps</a>'
+      + '<a href="'+esc(gisLink(h))+'" target="_blank" rel="noopener noreferrer">2GIS</a></div></div>'
+      + '<div class="d">'+d+'</div></div>';
+  }).join("");
+
+  /* --- reserves --- */
+  const showRes = isAlmatyCourse();
+  document.getElementById("mapReserves").hidden = !showRes;
+  if(showRes){
+    document.getElementById("mapReserveList").innerHTML = ALMATY_RESERVES.map(r =>
+      '<div class="resv"><div><b>'+esc(r[0])+'</b><span class="a" style="display:block; color:var(--ink-3); font-size:12.5px">'
+      + esc(r[1])+'</span></div><span class="tag '+r[2]+'">'
+      + (r[2]==="in" ? "on the route" : r[2]==="far" ? "taxi" : "verify") + '</span></div>').join("");
+  }
+}
+
+function isAlmatyCourse(){
+  return setup.holes.some(h => h.venue && ALMATY.holes.some(a => a.venue === h.venue));
+}
+
+function renderPenTable(){
+  document.getElementById("penTable").innerHTML =
+    '<thead><tr><th>Offence</th><th>Strokes</th></tr></thead><tbody>'
+    + setup.pens.map(p => '<tr><td>'+esc(p.name)+'</td><td>+'+p.strokes+'</td></tr>').join("") + '</tbody>';
+}
+
+function renderSetup(){
+  const cn = document.getElementById("courseName");
+  if(document.activeElement !== cn) cn.value = setup.name;
+
+  document.getElementById("reservePanel").hidden = true;
+
+  const ids = sortedPlayerIds();
+  document.getElementById("playerCount").textContent = ids.length + (ids.length===1?" player":" players");
+  document.getElementById("playerList").innerHTML = ids.length ? ids.map(id =>
+    '<div class="playerline"><span class="nm">'+esc(players[id].name)+'</span>'
+    + (id===me ? '<span class="you">this phone</span>' : '')
+    + '<button class="btn small ghost" type="button" data-rmplayer="'+id+'">Remove</button></div>').join("")
+    : '<p class="hint">Nobody yet.</p>';
+
+  document.getElementById("parTotal").textContent = "par " + totalPar();
+  document.getElementById("holeList").innerHTML = setup.holes.map((h,i) =>
+    '<div class="holeedit"><div class="hdr"><b>Hole '+(i+1)+'</b><span class="spacer"></span>'
+    + '<button class="btn small ghost" type="button" data-mvhole="'+i+'" data-dir="-1" aria-label="Move earlier"'+(i===0?" disabled":"")+'>&uarr;</button>'
+    + '<button class="btn small ghost" type="button" data-mvhole="'+i+'" data-dir="1" aria-label="Move later"'+(i===setup.holes.length-1?" disabled":"")+'>&darr;</button>'
+    + '<button class="btn small ghost" type="button" data-rmhole="'+i+'">Remove</button></div>'
+    + '<input type="text" data-f="venue" data-i="'+i+'" value="'+esc(h.venue)+'" placeholder="Pub name" style="margin-bottom:8px">'
+    + '<div class="grid2"><input type="text" data-f="drink" data-i="'+i+'" value="'+esc(h.drink)+'" placeholder="Drink">'
+    + '<input type="number" data-f="par" data-i="'+i+'" value="'+h.par+'" min="1" max="20" aria-label="Par"></div>'
+    + '<input type="text" data-f="note" data-i="'+i+'" value="'+esc(h.note)+'" placeholder="Address or note" style="margin-top:8px">'
+    + '</div>').join("");
+
+  document.getElementById("penList").innerHTML = setup.pens.map((p,i) =>
+    '<div class="playerline"><span class="nm">'+esc(p.name)+'</span>'
+    + '<input type="number" data-pf="strokes" data-pi="'+i+'" value="'+p.strokes+'" min="0" max="20" style="width:70px" aria-label="Strokes">'
+    + '<button class="btn small ghost" type="button" data-rmpen="'+i+'">Remove</button></div>').join("");
+}
+
+/* ======================= actions ======================= */
+
+function ensureEntry(pid, n){
+  const p = players[pid];
+  if(!p) return null;
+  if(!p.holes) p.holes = {};
+  const k = String(n);
+  if(!p.holes[k]) p.holes[k] = {s:null, pens:{}};
+  if(!p.holes[k].pens) p.holes[k].pens = {};
+  return p.holes[k];
+}
+function bumpStrokes(d){
+  if(!scoringFor) return;
+  const cur = entry(scoringFor, hole);
+  const now = (cur && cur.s != null) ? +cur.s : 0;
+  emit(setOp(["players", scoringFor, "holes", String(hole), "s"], Math.max(0, Math.min(99, now + d))));
+}
+function setStrokes(v){
+  if(!scoringFor) return;
+  emit(setOp(["players", scoringFor, "holes", String(hole), "s"], v));
+}
+function clearHole(){
+  if(!scoringFor) return;
+  emit(delOp(["players", scoringFor, "holes", String(hole)]));
+}
+function bumpPen(id, d){
+  if(!scoringFor) return;
+  const e = entry(scoringFor, hole);
+  const cur = (e && e.pens && e.pens[id]) || 0;
+  const next = Math.max(0, Math.min(20, cur + d));
+  const path = ["players", scoringFor, "holes", String(hole), "pens", id];
+  /* if this was the only thing on the hole, drop the hole entirely */
+  if(!next && e && e.s == null && Object.keys(e.pens || {}).length <= 1){
+    emit(delOp(["players", scoringFor, "holes", String(hole)]));
+    return;
+  }
+  emit(next ? setOp(path, next) : delOp(path));
+}
+function addPlayer(name, becomeMe){
+  name = (name || "").trim();
+  if(!name) return null;
+  const id = uid();
+  if(becomeMe){ me = id; scoringFor = id; lsSet(LS_ME, id); lsSet(LS_ME_NAME, name); }
+  else if(!scoringFor) scoringFor = id;
+  emit(setOp(["players", id], {name, holes:{}, joined:Date.now()}));
+  return id;
+}
+function removePlayer(pid){
+  if(me === pid){ me = null; lsSet(LS_ME, ""); lsSet(LS_ME_NAME, ""); }
+  if(scoringFor === pid) scoringFor = me;
+  emit(delOp(["players", pid]));
+  if(!me) openSheet();
+}
+
+const TABS = ["play","card","board","map","rules","share","setup"];
+function showTab(t){
+  tab = t; lsSet(LS_TAB, t);
+  TABS.forEach(k => { document.getElementById("view-"+k).hidden = (k !== t); });
+  Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), b => {
+    b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false");
+  });
+  document.querySelector("main").scrollTop = 0;
+  if(t === "map"){
+    mapInit();
+    if(!mapView) mapFit();
+    mapSchedule();
+  }
+}
+
+function openSheet(){
+  const ids = sortedPlayerIds().filter(id => id !== me);
+  document.getElementById("pick").innerHTML = ids.length
+    ? ids.map(id => '<button type="button" data-pickme="'+id+'">'+esc(players[id].name)+'</button>').join("")
+    : '<p class="hint" style="margin:0">Nobody has joined yet — you\'re first on the tee.</p>';
+  document.getElementById("sheet").hidden = false;
+}
+function closeSheet(){ document.getElementById("sheet").hidden = true; }
+
+function flash(id, msg, bad){
+  const el = document.getElementById(id);
+  el.textContent = msg; el.className = "said" + (bad ? " bad" : ""); el.hidden = false;
+  setTimeout(() => { el.hidden = true; }, 4000);
+}
+
+/* ======================= wiring ======================= */
+
+function wire(){
+  document.getElementById("tabs").addEventListener("click", e => {
+    const b = e.target.closest("button[data-tab]"); if(b) showTab(b.dataset.tab);
+  });
+  document.getElementById("netBadge").addEventListener("click", () => showTab("share"));
+
+  /* live game */
+  document.getElementById("roomCreate").addEventListener("click", () => {
+    const err = net.join(newCode(), true);
+    if(err) flash("saidRoom", err, true);
+  });
+  document.getElementById("roomGo").addEventListener("click", () => {
+    const i = document.getElementById("roomJoin");
+    const err = net.join(i.value, false);
+    if(err) flash("saidRoom", err, true); else i.value = "";
+  });
+  document.getElementById("roomJoin").addEventListener("keydown", e => {
+    if(e.key === "Enter") document.getElementById("roomGo").click();
+  });
+  document.getElementById("roomCopy").addEventListener("click", async () => {
+    const ok = await copyText(net.shareLink(), "roomLink");
+    flash("saidRoom2", ok ? "Copied" : "Select the link above and copy it", !ok);
+  });
+  document.getElementById("roomLeave").addEventListener("click", () => {
+    net.leave();
+    flash("saidRoom", "Left the game. Scores stay on this phone.", false);
+  });
+
+  document.getElementById("strip").addEventListener("click", e => {
+    const b = e.target.closest("button[data-hole]"); if(!b) return;
+    hole = +b.dataset.hole; render();
+  });
+  document.getElementById("minus").addEventListener("click", () => bumpStrokes(-1));
+  document.getElementById("plus").addEventListener("click",  () => bumpStrokes(1));
+  document.getElementById("setPar").addEventListener("click", () => setStrokes(parOf(hole)));
+  document.getElementById("clearHole").addEventListener("click", clearHole);
+  document.getElementById("nextHole").addEventListener("click", () => {
+    hole = hole >= setup.holes.length ? 1 : hole + 1;
+    render(); document.querySelector("main").scrollTop = 0;
+  });
+  document.getElementById("pens").addEventListener("click", e => {
+    const a = e.target.closest("[data-penadd]"); if(a){ bumpPen(a.dataset.penadd, 1); return; }
+    const s = e.target.closest("[data-pensub]"); if(s) bumpPen(s.dataset.pensub, -1);
+  });
+  document.getElementById("whoSelect").addEventListener("change", e => {
+    scoringFor = e.target.value || null; render();
+  });
+
+  /* share */
+  document.getElementById("copyRound").addEventListener("click", async () => {
+    const ok = await copyText(roundCode(), "roundCode");
+    flash("saidRound", ok ? "Copied — paste it in the group chat" : "Couldn't copy — select the text above and copy it", !ok);
+  });
+  document.getElementById("copyMine").addEventListener("click", async () => {
+    if(!me) return;
+    const ok = await copyText(playerCode(me), "roundCode");
+    flash("saidRound", ok ? "Copied your card — send it to the scorer" : "Couldn't copy — select the text above and copy it", !ok);
+    if(!ok) document.getElementById("roundCode").value = playerCode(me);
+  });
+  document.getElementById("loadCode").addEventListener("click", () => {
+    const ta = document.getElementById("pasteCode");
+    const r = loadCode(ta.value);
+    flash("saidLoad", r.msg, !r.ok);
+    if(r.ok) ta.value = "";
+  });
+
+  /* setup: course */
+  document.getElementById("courseName").addEventListener("change", e => {
+    emit(setOp(["setup","name"], e.target.value.trim() || "Pub Golf"));
+  });
+  document.getElementById("loadClassic").addEventListener("click", () => { hole = 1; emit(setOp(["setup"], freshSetup(CLASSIC))); });
+  document.getElementById("loadAlmaty").addEventListener("click",  () => { hole = 1; emit(setOp(["setup"], freshSetup(ALMATY))); });
+
+  /* setup: players */
+  document.getElementById("addPlayer").addEventListener("click", () => {
+    const i = document.getElementById("newPlayer");
+    if(addPlayer(i.value, !me)) i.value = "";
+  });
+  document.getElementById("newPlayer").addEventListener("keydown", e => {
+    if(e.key === "Enter") document.getElementById("addPlayer").click();
+  });
+  document.getElementById("playerList").addEventListener("click", e => {
+    const b = e.target.closest("[data-rmplayer]"); if(b) removePlayer(b.dataset.rmplayer);
+  });
+
+  /* setup: holes */
+  document.getElementById("holeList").addEventListener("change", e => {
+    const el = e.target.closest("[data-f]"); if(!el) return;
+    const h = setup.holes[+el.dataset.i]; if(!h) return;
+    const v = el.dataset.f === "par" ? Math.max(1, Math.min(20, +el.value || 1)) : el.value;
+    emit(setOp(["setup","holes", String(+el.dataset.i), el.dataset.f], v));
+  });
+  document.getElementById("holeList").addEventListener("click", e => {
+    const m = e.target.closest("[data-mvhole]");
+    if(m){
+      const i = +m.dataset.mvhole, j = i + (+m.dataset.dir);
+      if(j < 0 || j >= setup.holes.length) return;
+      const next = setup.holes.slice();
+      const t = next[i]; next[i] = next[j]; next[j] = t;
+      emit(setOp(["setup","holes"], next)); return;
+    }
+    const b = e.target.closest("[data-rmhole]"); if(!b || setup.holes.length <= 1) return;
+    const next = setup.holes.slice(); next.splice(+b.dataset.rmhole, 1);
+    emit(setOp(["setup","holes"], next));
+  });
+  document.getElementById("addHole").addEventListener("click", () => {
+    emit(setOp(["setup","holes"], setup.holes.concat([{venue:"", drink:"", par:3, note:""}])));
+  });
+
+  /* setup: penalties */
+  document.getElementById("penList").addEventListener("change", e => {
+    const el = e.target.closest("[data-pf]"); if(!el) return;
+    const p = setup.pens[+el.dataset.pi]; if(!p) return;
+    emit(setOp(["setup","pens", String(+el.dataset.pi), "strokes"], Math.max(0, Math.min(20, +el.value || 0))));
+  });
+  document.getElementById("penList").addEventListener("click", e => {
+    const b = e.target.closest("[data-rmpen]"); if(!b) return;
+    const next = setup.pens.slice(); next.splice(+b.dataset.rmpen, 1);
+    emit(setOp(["setup","pens"], next));
+  });
+  document.getElementById("addPen").addEventListener("click", () => {
+    const n = document.getElementById("newPenName"), v = document.getElementById("newPenVal");
+    const name = n.value.trim(); if(!name) return;
+    const next = setup.pens.concat([{id:uid(), name, strokes:Math.max(0, Math.min(20, +v.value || 1))}]);
+    n.value = ""; v.value = "1";
+    emit(setOp(["setup","pens"], next));
+  });
+
+  /* setup: danger */
+  document.getElementById("resetScores").addEventListener("click", () => {
+    hole = 1;
+    emit({t:"batch", ops:Object.keys(players).map(id => setOp(["players", id, "holes"], {}))});
+  });
+  document.getElementById("changeWho").addEventListener("click", openSheet);
+
+  /* identity sheet */
+  document.getElementById("pick").addEventListener("click", e => {
+    const b = e.target.closest("[data-pickme]"); if(!b) return;
+    me = b.dataset.pickme; scoringFor = me; lsSet(LS_ME, me);
+    lsSet(LS_ME_NAME, players[me] ? players[me].name : ""); closeSheet(); render();
+  });
+  document.getElementById("sheetAdd").addEventListener("click", () => {
+    const i = document.getElementById("sheetName");
+    if(addPlayer(i.value, true)){ i.value = ""; closeSheet(); }
+  });
+  document.getElementById("sheetName").addEventListener("keydown", e => {
+    if(e.key === "Enter") document.getElementById("sheetAdd").click();
+  });
+  document.getElementById("sheetSkip").addEventListener("click", () => { closeSheet(); render(); });
+}
+
+/* ======================= boot ======================= */
+
+(function boot(){
+  let saved = null;
+  try{ saved = JSON.parse(lsGet(LS_KEY) || "null"); }catch(e){}
+  setup = normaliseSetup(saved && saved.setup);
+  players = (saved && saved.players) || {};
+  me = lsGet(LS_ME) || null;
+  if(me && !players[me]) me = null;
+  scoringFor = me || sortedPlayerIds()[0] || null;
+  tab = TABS.indexOf(lsGet(LS_TAB)) >= 0 ? lsGet(LS_TAB) : "play";
+  wire(); showTab(tab); render();
+  if(!me && !Object.keys(players).length) openSheet();
+
+  /* /g/CODE in the address bar wins; otherwise rejoin whatever this
+     phone was last in. Only a game this phone already knew gets seeded
+     from local state, so a latecomer can never overwrite the round. */
+  const fromUrl = (location.pathname.match(/^\/g\/([^/]+)/) || [])[1];
+  const last = lsGet(LS_CODE) || "";
+  const code = (fromUrl || last || "").toUpperCase();
+  if(code) net.join(code, code === last.toUpperCase());
+  renderNet();
+})();
+</script>
+
+</body>
+</html>
